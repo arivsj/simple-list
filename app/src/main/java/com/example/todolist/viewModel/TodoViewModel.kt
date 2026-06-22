@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.todolist.domain.useCase.*
 import com.example.todolist.models.TodoGroup
 import com.example.todolist.models.TodoItem
+import com.example.todolist.notification.ReminderScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,7 +37,8 @@ class TodoViewModel @Inject constructor(
     private val addGroupUseCase: AddGroupUseCase,
     private val updateGroupUseCase: UpdateGroupUseCase,
     private val deleteGroupUseCase: DeleteGroupUseCase,
-    private val reorderGroupsUseCase: ReorderGroupsUseCase
+    private val reorderGroupsUseCase: ReorderGroupsUseCase,
+    private val reminderScheduler: ReminderScheduler
 ) : ViewModel() {
 
     private val _roomGroups = MutableStateFlow<List<TodoGroup>>(emptyList())
@@ -105,22 +107,29 @@ class TodoViewModel @Inject constructor(
         }
     }
 
-    fun addGroup(title: String) {
+    fun addGroup(title: String, deadline: Long? = null, reminderMinutes: Int? = null) {
         viewModelScope.launch {
-            addGroupUseCase(TodoGroup(title = title))
+            val groupId = addGroupUseCase(TodoGroup(title = title, deadline = deadline, reminderMinutes = reminderMinutes))
+            scheduleReminder(groupId, title, deadline, reminderMinutes)
         }
     }
 
     fun updateGroup(group: TodoGroup) {
+        reminderScheduler.cancel(group.id)
         viewModelScope.launch {
             updateGroupUseCase(group)
+            scheduleReminder(group.id, group.title, group.deadline, group.reminderMinutes)
         }
     }
 
     fun deleteGroup(group: TodoGroup) {
+        reminderScheduler.cancel(group.id)
         viewModelScope.launch {
             val groupItems = _allItems.value.filter { it.groupId == group.id }
-            groupItems.forEach { deleteTodoUseCase(it) }
+            groupItems.forEach { item ->
+                reminderScheduler.cancel(item.id)
+                deleteTodoUseCase(item)
+            }
             deleteGroupUseCase(group)
             if (_selectedGroup.value?.id == group.id) {
                 clearSelectedGroup()
@@ -129,8 +138,15 @@ class TodoViewModel @Inject constructor(
     }
 
     fun toggleGroup(group: TodoGroup) {
+        val newDone = !group.isDone
+        if (newDone) {
+            reminderScheduler.cancel(group.id)
+        }
         viewModelScope.launch {
-            updateGroupUseCase(group.copy(isDone = !group.isDone))
+            updateGroupUseCase(group.copy(isDone = newDone))
+            if (!newDone) {
+                scheduleReminder(group.id, group.title, group.deadline, group.reminderMinutes)
+            }
         }
     }
 
@@ -167,20 +183,24 @@ class TodoViewModel @Inject constructor(
         }
     }
 
-    fun addTodo(title: String, description: String = "", priority: Int = 0) {
+    fun addTodo(title: String, description: String = "", priority: Int = 0, deadline: Long? = null, reminderMinutes: Int? = null) {
         val groupId = _selectedGroup.value?.id
         viewModelScope.launch {
-            addTodoUseCase(TodoItem(title = title, description = description, priority = priority, groupId = groupId))
+            val itemId = addTodoUseCase(TodoItem(title = title, description = description, priority = priority, groupId = groupId, deadline = deadline, reminderMinutes = reminderMinutes))
+            scheduleReminder(itemId, title, deadline, reminderMinutes)
         }
     }
 
     fun updateTodo(item: TodoItem) {
+        reminderScheduler.cancel(item.id)
         viewModelScope.launch {
             updateTodoUseCase(item)
+            scheduleReminder(item.id, item.title, item.deadline, item.reminderMinutes)
         }
     }
 
     fun deleteTodo(item: TodoItem) {
+        reminderScheduler.cancel(item.id)
         viewModelScope.launch {
             deleteTodoUseCase(item)
         }
@@ -192,6 +212,9 @@ class TodoViewModel @Inject constructor(
             updateTodoUseCase(updated)
             if (updated.isDone) {
                 checkAllCompleted()
+                reminderScheduler.cancel(updated.id)
+            } else {
+                scheduleReminder(updated.id, updated.title, updated.deadline, updated.reminderMinutes)
             }
             item.groupId?.let { groupId ->
                 val groupItems = _allItems.value.filter { it.groupId == groupId }
@@ -202,6 +225,15 @@ class TodoViewModel @Inject constructor(
                 } else if (group != null && !allDone && group.isDone) {
                     updateGroupUseCase(group.copy(isDone = false))
                 }
+            }
+        }
+    }
+
+    private fun scheduleReminder(itemId: Long, title: String, deadline: Long?, reminderMinutes: Int?) {
+        if (deadline != null && reminderMinutes != null && reminderMinutes > 0) {
+            val triggerTime = deadline - (reminderMinutes * 60_000L)
+            if (triggerTime > System.currentTimeMillis()) {
+                reminderScheduler.schedule(itemId, title, triggerTime)
             }
         }
     }

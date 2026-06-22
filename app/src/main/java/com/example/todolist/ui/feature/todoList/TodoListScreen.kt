@@ -1,8 +1,13 @@
 package com.example.todolist.ui.feature.todoList
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
@@ -19,6 +24,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,10 +34,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.example.todolist.R
 import com.example.todolist.models.TodoGroup
 import com.example.todolist.models.TodoItem
 import com.example.todolist.viewModel.TodoViewModel
@@ -39,6 +48,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import java.util.TimeZone
 
 private sealed class UiItem {
     data class GroupItem(val group: TodoGroup) : UiItem()
@@ -59,6 +72,16 @@ fun TodoListScreen(viewModel: TodoViewModel) {
     var showCelebrationDialog by remember { mutableStateOf(false) }
     var groupToDelete by remember { mutableStateOf<TodoGroup?>(null) }
     var taskToDelete by remember { mutableStateOf<TodoItem?>(null) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -94,7 +117,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
         topBar = {
             TopAppBar(
                 title = {
-                    Text(if (uiState.selectedGroup != null) uiState.selectedGroup!!.title else "Simple List")
+                    Text(if (uiState.selectedGroup != null) uiState.selectedGroup!!.title else "Dito e Feito!")
                 },
                 navigationIcon = {
                     if (uiState.selectedGroup != null) {
@@ -129,7 +152,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             } else if (mergedItems.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = if (uiState.selectedGroup != null) "Nenhuma tarefa neste grupo" else "Nenhum item ainda",
+                        text = if (uiState.selectedGroup != null) "Nenhuma tarefa nesta categoria" else "Nenhum item ainda",
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
@@ -272,17 +295,17 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                                 }
                                 UiItem.GroupHeader -> {
                                     Text(
-                                        text = "Grupos",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        text = "Categorias",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color.White,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                                     )
                                 }
                                 UiItem.TaskHeader -> {
                                     Text(
                                         text = "Tarefas",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color.White,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                                     )
                                 }
@@ -318,8 +341,8 @@ fun TodoListScreen(viewModel: TodoViewModel) {
     if (showAddDialog) {
         TodoDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { title, desc, priority ->
-                viewModel.addTodo(title, desc, priority)
+            onConfirm = { title, desc, priority, deadline, reminderMinutes ->
+                viewModel.addTodo(title, desc, priority, deadline, reminderMinutes)
                 showAddDialog = false
             }
         )
@@ -330,9 +353,11 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             initialTitle = item.title,
             initialDesc = item.description,
             initialPriority = item.priority,
+            initialDeadline = item.deadline,
+            initialReminderMinutes = item.reminderMinutes,
             onDismiss = { itemToEdit = null },
-            onConfirm = { title, desc, priority ->
-                viewModel.updateTodo(item.copy(title = title, description = desc, priority = priority))
+            onConfirm = { title, desc, priority, deadline, reminderMinutes ->
+                viewModel.updateTodo(item.copy(title = title, description = desc, priority = priority, deadline = deadline, reminderMinutes = reminderMinutes))
                 itemToEdit = null
             }
         )
@@ -341,15 +366,17 @@ fun TodoListScreen(viewModel: TodoViewModel) {
     if (showGroupDialog) {
         GroupDialog(
             initialTitle = groupToEdit?.title ?: "",
+            initialDeadline = groupToEdit?.deadline,
+            initialReminderMinutes = groupToEdit?.reminderMinutes,
             onDismiss = {
                 showGroupDialog = false
                 groupToEdit = null
             },
-            onConfirm = { title ->
+            onConfirm = { title, deadline, reminderMinutes ->
                 if (groupToEdit != null) {
-                    viewModel.updateGroup(groupToEdit!!.copy(title = title))
+                    viewModel.updateGroup(groupToEdit!!.copy(title = title, deadline = deadline, reminderMinutes = reminderMinutes))
                 } else {
-                    viewModel.addGroup(title)
+                    viewModel.addGroup(title, deadline, reminderMinutes)
                 }
                 showGroupDialog = false
                 groupToEdit = null
@@ -361,9 +388,11 @@ fun TodoListScreen(viewModel: TodoViewModel) {
         if (!showGroupDialog) {
             GroupDialog(
                 initialTitle = group.title,
+                initialDeadline = group.deadline,
+                initialReminderMinutes = group.reminderMinutes,
                 onDismiss = { groupToEdit = null },
-                onConfirm = { title ->
-                    viewModel.updateGroup(group.copy(title = title))
+                onConfirm = { title, deadline, reminderMinutes ->
+                    viewModel.updateGroup(group.copy(title = title, deadline = deadline, reminderMinutes = reminderMinutes))
                     groupToEdit = null
                 }
             )
@@ -414,8 +443,8 @@ fun TodoListScreen(viewModel: TodoViewModel) {
     groupToDelete?.let { group ->
         AlertDialog(
             onDismissRequest = { groupToDelete = null },
-            title = { Text("Excluir Grupo") },
-            text = { Text("Tem certeza que deseja excluir o grupo \"${group.title}\"?") },
+            title = { Text("Excluir Categoria") },
+            text = { Text("Tem certeza que deseja excluir a categoria \"${group.title}\"?") },
             confirmButton = {
                 Button(onClick = {
                     viewModel.deleteGroup(group)
@@ -426,7 +455,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { groupToDelete = null }) {
-                    Text("Cancelar")
+                    Text("Cancelar", color = Color(0xFF00CAEE))
                 }
             }
         )
@@ -447,7 +476,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { taskToDelete = null }) {
-                    Text("Cancelar")
+                    Text("Cancelar", color = Color(0xFF00CAEE))
                 }
             }
         )
@@ -478,15 +507,15 @@ private fun GroupItemRow(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+          //  Icon(
+          //      Icons.Default.Menu,
+          //      contentDescription = "Arrastar",
+         //       modifier = Modifier.padding(end = 8.dp),
+         //       tint = MaterialTheme.colorScheme.outline
+          //  )
             Icon(
-                Icons.Default.Menu,
-                contentDescription = "Arrastar",
-                modifier = Modifier.padding(end = 8.dp),
-                tint = MaterialTheme.colorScheme.outline
-            )
-            Icon(
-                Icons.Default.KeyboardArrowDown,
-                contentDescription = "Grupo",
+                Icons.Default.Star,
+                contentDescription = "Categoria",
                 modifier = Modifier.padding(end = 8.dp),
                 tint = if (group.isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
@@ -495,12 +524,22 @@ private fun GroupItemRow(
                 onCheckedChange = { onToggle() }
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = group.title,
-                style = MaterialTheme.typography.titleMedium,
-                textDecoration = if (group.isDone) TextDecoration.LineThrough else null,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = group.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    textDecoration = if (group.isDone) TextDecoration.LineThrough else null
+                )
+                if (group.deadline != null) {
+                    Text(
+                        text = "Prazo: ${
+                            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(group.deadline)
+                        }",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Default.Edit, contentDescription = "Editar")
             }
@@ -556,6 +595,15 @@ fun TodoItemRow(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+                if (item.deadline != null) {
+                    Text(
+                        text = "Prazo: ${
+                            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(item.deadline)
+                        }",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Default.Edit, contentDescription = "Editar")
@@ -567,17 +615,76 @@ fun TodoItemRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoDialog(
     initialTitle: String = "",
     initialDesc: String = "",
     initialPriority: Int = 0,
+    initialDeadline: Long? = null,
+    initialReminderMinutes: Int? = null,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, Int) -> Unit
+    onConfirm: (String, String, Int, Long?, Int?) -> Unit
 ) {
     var title by remember { mutableStateOf(initialTitle) }
     var desc by remember { mutableStateOf(initialDesc) }
     var priority by remember { mutableIntStateOf(initialPriority) }
+    var hasDeadline by remember { mutableStateOf(initialDeadline != null) }
+    var deadline by remember { mutableStateOf(initialDeadline) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var hasReminder by remember { mutableStateOf(initialReminderMinutes != null) }
+    var reminderValue by remember { mutableStateOf(
+        initialReminderMinutes?.let { mins ->
+            when {
+                mins % 525600 == 0 -> (mins / 525600).toString()
+                mins % 43200 == 0 -> (mins / 43200).toString()
+                mins % 1440 == 0 -> (mins / 1440).toString()
+                mins % 60 == 0 -> (mins / 60).toString()
+                else -> mins.toString()
+            }
+        } ?: "1"
+    ) }
+    var reminderUnitIndex by remember { mutableIntStateOf(
+        initialReminderMinutes?.let { mins ->
+            when {
+                mins % 525600 == 0 && mins / 525600 in 1..999 -> 4
+                mins % 43200 == 0 && mins / 43200 in 1..999 -> 3
+                mins % 1440 == 0 && mins / 1440 in 1..999 -> 2
+                mins % 60 == 0 && mins / 60 in 1..999 -> 1
+                else -> 0
+            }
+        } ?: 2
+    ) }
+    var showUnitMenu by remember { mutableStateOf(false) }
+    val unitLabels = listOf("minuto(s)", "hora(s)", "dia(s)", "mês(es)", "ano(s)")
+    val unitMultipliers = listOf(1, 60, 1440, 43200, 525600)
+
+    val datePickerInitial = deadline?.let {
+        val local = Calendar.getInstance()
+        local.timeInMillis = it
+        val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        utc.set(Calendar.YEAR, local.get(Calendar.YEAR))
+        utc.set(Calendar.MONTH, local.get(Calendar.MONTH))
+        utc.set(Calendar.DAY_OF_MONTH, local.get(Calendar.DAY_OF_MONTH))
+        utc.set(Calendar.HOUR_OF_DAY, 0)
+        utc.set(Calendar.MINUTE, 0)
+        utc.set(Calendar.SECOND, 0)
+        utc.set(Calendar.MILLISECOND, 0)
+        utc.timeInMillis
+    } ?: System.currentTimeMillis()
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = datePickerInitial
+    )
+    val timePickerState = rememberTimePickerState(
+        initialHour = if (deadline != null) {
+            Calendar.getInstance().apply { timeInMillis = deadline!! }.get(Calendar.HOUR_OF_DAY)
+        } else Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
+        initialMinute = if (deadline != null) {
+            Calendar.getInstance().apply { timeInMillis = deadline!! }.get(Calendar.MINUTE)
+        } else Calendar.getInstance().get(Calendar.MINUTE),
+        is24Hour = true
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -597,13 +704,91 @@ fun TodoDialog(
                     label = { Text("Descrição") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = hasDeadline, onCheckedChange = { hasDeadline = it })
+                    Text("Definir prazo")
+                }
+                if (hasDeadline) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { showDatePicker = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                if (deadline != null) {
+                                    SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(deadline)
+                                } else "Data"
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedButton(
+                            onClick = { showTimePicker = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                if (deadline != null) {
+                                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(deadline)
+                                } else "Hora"
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = hasReminder, onCheckedChange = { hasReminder = it })
+                        Text("Avisar antes")
+                    }
+                    if (hasReminder) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = reminderValue,
+                                onValueChange = { reminderValue = it.filter { c -> c.isDigit() } },
+                                modifier = Modifier.width(80.dp),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Box {
+                                OutlinedButton(onClick = { showUnitMenu = true }) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(unitLabels[reminderUnitIndex])
+                                        Icon(
+                                            Icons.Default.KeyboardArrowDown,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                DropdownMenu(
+                                    expanded = showUnitMenu,
+                                    onDismissRequest = { showUnitMenu = false }
+                                ) {
+                                    unitLabels.forEachIndexed { index, label ->
+                                        DropdownMenuItem(
+                                            text = { Text(label) },
+                                            onClick = {
+                                                reminderUnitIndex = index
+                                                showUnitMenu = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
-                        onConfirm(title, desc, priority)
+                        val reminderMinutes = if (hasDeadline && hasReminder) {
+                            (reminderValue.toIntOrNull() ?: 0) * unitMultipliers[reminderUnitIndex]
+                        } else null
+                        onConfirm(title, desc, priority, deadline, if (reminderMinutes == 0) null else reminderMinutes)
                     }
                 }
             ) {
@@ -612,36 +797,239 @@ fun TodoDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text("Cancelar", color = Color(0xFF00CAEE))
             }
         }
     )
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { selectedDate ->
+                        val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+                        utcCal.timeInMillis = selectedDate
+                        val cal = Calendar.getInstance()
+                        if (deadline != null) cal.timeInMillis = deadline!!
+                        cal.set(Calendar.YEAR, utcCal.get(Calendar.YEAR))
+                        cal.set(Calendar.MONTH, utcCal.get(Calendar.MONTH))
+                        cal.set(Calendar.DAY_OF_MONTH, utcCal.get(Calendar.DAY_OF_MONTH))
+                        deadline = cal.timeInMillis
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancelar")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("Selecionar hora") },
+            text = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TimePicker(state = timePickerState)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val cal = Calendar.getInstance()
+                    if (deadline != null) cal.timeInMillis = deadline!!
+                    cal.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                    cal.set(Calendar.MINUTE, timePickerState.minute)
+                    cal.set(Calendar.SECOND, 0)
+                    cal.set(Calendar.MILLISECOND, 0)
+                    deadline = cal.timeInMillis
+                    showTimePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GroupDialog(
     initialTitle: String = "",
+    initialDeadline: Long? = null,
+    initialReminderMinutes: Int? = null,
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String, Long?, Int?) -> Unit
 ) {
     var title by remember { mutableStateOf(initialTitle) }
+    var hasDeadline by remember { mutableStateOf(initialDeadline != null) }
+    var deadline by remember { mutableStateOf(initialDeadline) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var hasReminder by remember { mutableStateOf(initialReminderMinutes != null) }
+    var reminderValue by remember { mutableStateOf(
+        initialReminderMinutes?.let { mins ->
+            when {
+                mins % 525600 == 0 -> (mins / 525600).toString()
+                mins % 43200 == 0 -> (mins / 43200).toString()
+                mins % 1440 == 0 -> (mins / 1440).toString()
+                mins % 60 == 0 -> (mins / 60).toString()
+                else -> mins.toString()
+            }
+        } ?: "1"
+    ) }
+    var reminderUnitIndex by remember { mutableIntStateOf(
+        initialReminderMinutes?.let { mins ->
+            when {
+                mins % 525600 == 0 && mins / 525600 in 1..999 -> 4
+                mins % 43200 == 0 && mins / 43200 in 1..999 -> 3
+                mins % 1440 == 0 && mins / 1440 in 1..999 -> 2
+                mins % 60 == 0 && mins / 60 in 1..999 -> 1
+                else -> 0
+            }
+        } ?: 2
+    ) }
+    var showUnitMenu by remember { mutableStateOf(false) }
+    val unitLabels = listOf("minuto(s)", "hora(s)", "dia(s)", "mês(es)", "ano(s)")
+    val unitMultipliers = listOf(1, 60, 1440, 43200, 525600)
+
+    val datePickerInitial = deadline?.let {
+        val local = Calendar.getInstance()
+        local.timeInMillis = it
+        val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        utc.set(Calendar.YEAR, local.get(Calendar.YEAR))
+        utc.set(Calendar.MONTH, local.get(Calendar.MONTH))
+        utc.set(Calendar.DAY_OF_MONTH, local.get(Calendar.DAY_OF_MONTH))
+        utc.set(Calendar.HOUR_OF_DAY, 0)
+        utc.set(Calendar.MINUTE, 0)
+        utc.set(Calendar.SECOND, 0)
+        utc.set(Calendar.MILLISECOND, 0)
+        utc.timeInMillis
+    } ?: System.currentTimeMillis()
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = datePickerInitial
+    )
+    val timePickerState = rememberTimePickerState(
+        initialHour = if (deadline != null) {
+            Calendar.getInstance().apply { timeInMillis = deadline!! }.get(Calendar.HOUR_OF_DAY)
+        } else Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
+        initialMinute = if (deadline != null) {
+            Calendar.getInstance().apply { timeInMillis = deadline!! }.get(Calendar.MINUTE)
+        } else Calendar.getInstance().get(Calendar.MINUTE),
+        is24Hour = true
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialTitle.isEmpty()) "Criar Grupo" else "Editar Grupo") },
+        title = { Text(if (initialTitle.isEmpty()) "Criar Categoria" else "Editar Categoria") },
         text = {
-            TextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Nome do Grupo") },
-                modifier = Modifier.fillMaxWidth()
-            )
+            Column {
+                TextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Nome da Categoria") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = hasDeadline, onCheckedChange = { hasDeadline = it })
+                    Text("Definir prazo")
+                }
+                if (hasDeadline) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { showDatePicker = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                if (deadline != null) {
+                                    SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(deadline)
+                                } else "Data"
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedButton(
+                            onClick = { showTimePicker = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                if (deadline != null) {
+                                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(deadline)
+                                } else "Hora"
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = hasReminder, onCheckedChange = { hasReminder = it })
+                        Text("Avisar antes")
+                    }
+                    if (hasReminder) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = reminderValue,
+                                onValueChange = { reminderValue = it.filter { c -> c.isDigit() } },
+                                modifier = Modifier.width(80.dp),
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Box {
+                                OutlinedButton(onClick = { showUnitMenu = true }) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(unitLabels[reminderUnitIndex])
+                                        Icon(
+                                            Icons.Default.KeyboardArrowDown,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                DropdownMenu(
+                                    expanded = showUnitMenu,
+                                    onDismissRequest = { showUnitMenu = false }
+                                ) {
+                                    unitLabels.forEachIndexed { index, label ->
+                                        DropdownMenuItem(
+                                            text = { Text(label) },
+                                            onClick = {
+                                                reminderUnitIndex = index
+                                                showUnitMenu = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         },
         confirmButton = {
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
-                        onConfirm(title)
+                        val reminderMinutes = if (hasDeadline && hasReminder) {
+                            (reminderValue.toIntOrNull() ?: 0) * unitMultipliers[reminderUnitIndex]
+                        } else null
+                        onConfirm(title, deadline, if (reminderMinutes == 0) null else reminderMinutes)
                     }
                 }
             ) {
@@ -650,10 +1038,74 @@ private fun GroupDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text("Cancelar", color = Color(0xFF00CAEE))
             }
         }
     )
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { selectedDate ->
+                        val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+                        utcCal.timeInMillis = selectedDate
+                        val cal = Calendar.getInstance()
+                        if (deadline != null) cal.timeInMillis = deadline!!
+                        cal.set(Calendar.YEAR, utcCal.get(Calendar.YEAR))
+                        cal.set(Calendar.MONTH, utcCal.get(Calendar.MONTH))
+                        cal.set(Calendar.DAY_OF_MONTH, utcCal.get(Calendar.DAY_OF_MONTH))
+                        deadline = cal.timeInMillis
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancelar")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("Selecionar hora") },
+            text = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TimePicker(state = timePickerState)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val cal = Calendar.getInstance()
+                    if (deadline != null) cal.timeInMillis = deadline!!
+                    cal.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                    cal.set(Calendar.MINUTE, timePickerState.minute)
+                    cal.set(Calendar.SECOND, 0)
+                    cal.set(Calendar.MILLISECOND, 0)
+                    deadline = cal.timeInMillis
+                    showTimePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -671,25 +1123,24 @@ private fun CreateChoiceDialog(
                     onClick = onCreateTask,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
+                   // Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Criar Tarefa")
+                    Text("Criar Tarefa", color = Color.White)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedButton(
                     onClick = onCreateGroup,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.DateRange, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Criar Grupo")
+                    Spacer(Modifier.width(8.dp).size(6.dp))
+                    Text("Criar Categoria", color = Color.White)
                 }
             }
         },
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text("Cancelar", color = Color(0xFF00CAEE))
             }
         }
     )

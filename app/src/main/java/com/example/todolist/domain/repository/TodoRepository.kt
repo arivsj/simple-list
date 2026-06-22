@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface TodoRepository {
     fun getAllItems(): Flow<List<TodoItem>>
-    suspend fun insertItem(item: TodoItem)
+    suspend fun insertItem(item: TodoItem): Long
     suspend fun updateItem(item: TodoItem)
     suspend fun updateItems(items: List<TodoItem>)
     suspend fun deleteItem(item: TodoItem)

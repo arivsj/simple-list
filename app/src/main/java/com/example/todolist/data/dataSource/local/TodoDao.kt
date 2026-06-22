@@ -20,7 +20,7 @@ interface TodoDao {
     fun getItemsByGroupId(groupId: Long): Flow<List<TodoEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertItem(item: TodoEntity)
+    suspend fun insertItem(item: TodoEntity): Long
 
     @Update
     suspend fun updateItem(item: TodoEntity)

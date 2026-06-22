@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface TodoGroupRepository {
     fun getAllGroups(): Flow<List<TodoGroup>>
-    suspend fun insertGroup(group: TodoGroup)
+    suspend fun insertGroup(group: TodoGroup): Long
     suspend fun updateGroup(group: TodoGroup)
     suspend fun updateGroups(groups: List<TodoGroup>)
     suspend fun deleteGroup(group: TodoGroup)

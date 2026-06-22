@@ -14,7 +14,7 @@ interface TodoGroupDao {
     fun getAllGroups(): Flow<List<TodoGroupEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertGroup(group: TodoGroupEntity)
+    suspend fun insertGroup(group: TodoGroupEntity): Long
 
     @Update
     suspend fun updateGroup(group: TodoGroupEntity)

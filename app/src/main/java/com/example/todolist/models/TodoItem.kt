@@ -6,5 +6,7 @@ data class TodoItem(
     val description: String = "",
     val isDone: Boolean = false,
     val priority: Int = 0, // Used for reclassification
-    val groupId: Long? = null
+    val groupId: Long? = null,
+    val deadline: Long? = null,
+    val reminderMinutes: Int? = null
 )

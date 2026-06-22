@@ -10,19 +10,25 @@ data class TodoGroupEntity(
     val id: Long = 0,
     val title: String,
     val isDone: Boolean,
-    val priority: Int
+    val priority: Int,
+    val deadline: Long? = null,
+    val reminderMinutes: Int? = null
 )
 
 fun TodoGroupEntity.toDomain() = TodoGroup(
     id = id,
     title = title,
     isDone = isDone,
-    priority = priority
+    priority = priority,
+    deadline = deadline,
+    reminderMinutes = reminderMinutes
 )
 
 fun TodoGroup.toEntity() = TodoGroupEntity(
     id = id,
     title = title,
     isDone = isDone,
-    priority = priority
+    priority = priority,
+    deadline = deadline,
+    reminderMinutes = reminderMinutes
 )

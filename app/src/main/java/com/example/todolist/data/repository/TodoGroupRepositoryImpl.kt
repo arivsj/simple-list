@@ -18,8 +18,8 @@ class TodoGroupRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun insertGroup(group: TodoGroup) {
-        dao.insertGroup(group.toEntity())
+    override suspend fun insertGroup(group: TodoGroup): Long {
+        return dao.insertGroup(group.toEntity())
     }
 
     override suspend fun updateGroup(group: TodoGroup) {
