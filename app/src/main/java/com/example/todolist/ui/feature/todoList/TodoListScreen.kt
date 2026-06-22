@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -117,12 +118,12 @@ fun TodoListScreen(viewModel: TodoViewModel) {
         topBar = {
             TopAppBar(
                 title = {
-                    Text(if (uiState.selectedGroup != null) uiState.selectedGroup!!.title else "Dito e Feito!")
+                    Text(if (uiState.selectedGroup != null) uiState.selectedGroup!!.title else stringResource(R.string.app_title), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 },
                 navigationIcon = {
                     if (uiState.selectedGroup != null) {
                         IconButton(onClick = { viewModel.clearSelectedGroup() }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
+                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.nav_back))
                         }
                     }
                 }
@@ -136,7 +137,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                     showCreateChoice = true
                 }
             }) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.fab_add))
             }
         }
     ) { padding ->
@@ -152,7 +153,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             } else if (mergedItems.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = if (uiState.selectedGroup != null) "Nenhuma tarefa nesta categoria" else "Nenhum item ainda",
+                        text = if (uiState.selectedGroup != null) stringResource(R.string.empty_group_tasks) else stringResource(R.string.empty_no_items),
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
@@ -295,7 +296,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                                 }
                                 UiItem.GroupHeader -> {
                                     Text(
-                                        text = "Categorias",
+                                        text = stringResource(R.string.section_categories),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = Color.White,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -303,7 +304,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                                 }
                                 UiItem.TaskHeader -> {
                                     Text(
-                                        text = "Tarefas",
+                                        text = stringResource(R.string.section_tasks),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = Color.White,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -415,7 +416,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             },
             title = {
                 Text(
-                    text = "Parabéns!",
+                    text = stringResource(R.string.celebration_title),
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
@@ -434,7 +435,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                     showCelebrationDialog = false
                     viewModel.dismissCelebration()
                 }) {
-                    Text("Continuar")
+                    Text(stringResource(R.string.celebration_continue))
                 }
             }
         )
@@ -443,19 +444,19 @@ fun TodoListScreen(viewModel: TodoViewModel) {
     groupToDelete?.let { group ->
         AlertDialog(
             onDismissRequest = { groupToDelete = null },
-            title = { Text("Excluir Categoria") },
-            text = { Text("Tem certeza que deseja excluir a categoria \"${group.title}\"?") },
+            title = { Text(stringResource(R.string.delete_category_title)) },
+            text = { Text(stringResource(R.string.delete_category_message, group.title)) },
             confirmButton = {
                 Button(onClick = {
                     viewModel.deleteGroup(group)
                     groupToDelete = null
                 }) {
-                    Text("Excluir")
+                    Text(stringResource(R.string.action_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { groupToDelete = null }) {
-                    Text("Cancelar", color = Color(0xFF00CAEE))
+                    Text(stringResource(R.string.action_cancel), color = Color(0xFF00CAEE))
                 }
             }
         )
@@ -464,19 +465,19 @@ fun TodoListScreen(viewModel: TodoViewModel) {
     taskToDelete?.let { task ->
         AlertDialog(
             onDismissRequest = { taskToDelete = null },
-            title = { Text("Excluir Tarefa") },
-            text = { Text("Tem certeza que deseja excluir a tarefa \"${task.title}\"?") },
+            title = { Text(stringResource(R.string.delete_task_title)) },
+            text = { Text(stringResource(R.string.delete_task_message, task.title)) },
             confirmButton = {
                 Button(onClick = {
                     viewModel.deleteTodo(task)
                     taskToDelete = null
                 }) {
-                    Text("Excluir")
+                    Text(stringResource(R.string.action_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { taskToDelete = null }) {
-                    Text("Cancelar", color = Color(0xFF00CAEE))
+                    Text(stringResource(R.string.action_cancel), color = Color(0xFF00CAEE))
                 }
             }
         )
@@ -515,7 +516,7 @@ private fun GroupItemRow(
           //  )
             Icon(
                 Icons.Default.Star,
-                contentDescription = "Categoria",
+                contentDescription = stringResource(R.string.icon_category),
                 modifier = Modifier.padding(end = 8.dp),
                 tint = if (group.isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
@@ -532,19 +533,17 @@ private fun GroupItemRow(
                 )
                 if (group.deadline != null) {
                     Text(
-                        text = "Prazo: ${
-                            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(group.deadline)
-                        }",
+                        text = stringResource(R.string.deadline_prefix) + SimpleDateFormat(stringResource(R.string.date_format_full), Locale.getDefault()).format(group.deadline),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
             }
             IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Editar")
+                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.icon_edit))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Excluir")
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
             }
         }
     }
@@ -574,7 +573,7 @@ fun TodoItemRow(
         ) {
             Icon(
                 Icons.Default.Menu,
-                contentDescription = "Arrastar",
+contentDescription = stringResource(R.string.icon_drag),
                 modifier = Modifier.padding(end = 8.dp),
                 tint = MaterialTheme.colorScheme.outline
             )
@@ -597,19 +596,17 @@ fun TodoItemRow(
                 }
                 if (item.deadline != null) {
                     Text(
-                        text = "Prazo: ${
-                            SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(item.deadline)
-                        }",
+                        text = stringResource(R.string.deadline_prefix) + SimpleDateFormat(stringResource(R.string.date_format_full), Locale.getDefault()).format(item.deadline),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
             }
             IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Editar")
+                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.icon_edit))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Excluir")
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
             }
         }
     }
@@ -657,7 +654,13 @@ fun TodoDialog(
         } ?: 2
     ) }
     var showUnitMenu by remember { mutableStateOf(false) }
-    val unitLabels = listOf("minuto(s)", "hora(s)", "dia(s)", "mês(es)", "ano(s)")
+    val unitLabels = listOf(
+        stringResource(R.string.reminder_unit_minutes),
+        stringResource(R.string.reminder_unit_hours),
+        stringResource(R.string.reminder_unit_days),
+        stringResource(R.string.reminder_unit_months),
+        stringResource(R.string.reminder_unit_years)
+    )
     val unitMultipliers = listOf(1, 60, 1440, 43200, 525600)
 
     val datePickerInitial = deadline?.let {
@@ -688,26 +691,26 @@ fun TodoDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialTitle.isEmpty()) "Adicionar Tarefa" else "Editar Tarefa") },
+        title = { Text(if (initialTitle.isEmpty()) stringResource(R.string.todo_dialog_title_add) else stringResource(R.string.todo_dialog_title_edit)) },
         text = {
             Column {
                 TextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Título") },
+                    label = { Text(stringResource(R.string.field_title)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = desc,
                     onValueChange = { desc = it },
-                    label = { Text("Descrição") },
+                    label = { Text(stringResource(R.string.field_description)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = hasDeadline, onCheckedChange = { hasDeadline = it })
-                    Text("Definir prazo")
+                    Text(stringResource(R.string.deadline_checkbox))
                 }
                 if (hasDeadline) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -718,8 +721,8 @@ fun TodoDialog(
                         ) {
                             Text(
                                 if (deadline != null) {
-                                    SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(deadline)
-                                } else "Data"
+                                    SimpleDateFormat(stringResource(R.string.date_format_date), Locale.getDefault()).format(deadline)
+                                } else stringResource(R.string.date_placeholder)
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -729,15 +732,15 @@ fun TodoDialog(
                         ) {
                             Text(
                                 if (deadline != null) {
-                                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(deadline)
-                                } else "Hora"
+                                    SimpleDateFormat(stringResource(R.string.date_format_time), Locale.getDefault()).format(deadline)
+                                } else stringResource(R.string.time_placeholder)
                             )
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = hasReminder, onCheckedChange = { hasReminder = it })
-                        Text("Avisar antes")
+                        Text(stringResource(R.string.reminder_checkbox))
                     }
                     if (hasReminder) {
                         Spacer(modifier = Modifier.height(4.dp))
@@ -792,12 +795,12 @@ fun TodoDialog(
                     }
                 }
             ) {
-                Text("Confirmar")
+                Text(stringResource(R.string.action_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = Color(0xFF00CAEE))
+                Text(stringResource(R.string.action_cancel), color = Color(0xFF00CAEE))
             }
         }
     )
@@ -819,12 +822,12 @@ fun TodoDialog(
                     }
                     showDatePicker = false
                 }) {
-                    Text("OK")
+                    Text(stringResource(R.string.date_picker_ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         ) {
@@ -835,7 +838,7 @@ fun TodoDialog(
     if (showTimePicker) {
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            title = { Text("Selecionar hora") },
+            title = { Text(stringResource(R.string.time_picker_title)) },
             text = {
                 Box(
                     modifier = Modifier.fillMaxWidth(),
@@ -855,12 +858,12 @@ fun TodoDialog(
                     deadline = cal.timeInMillis
                     showTimePicker = false
                 }) {
-                    Text("OK")
+                    Text(stringResource(R.string.date_picker_ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTimePicker = false }) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -905,7 +908,13 @@ private fun GroupDialog(
         } ?: 2
     ) }
     var showUnitMenu by remember { mutableStateOf(false) }
-    val unitLabels = listOf("minuto(s)", "hora(s)", "dia(s)", "mês(es)", "ano(s)")
+    val unitLabels = listOf(
+        stringResource(R.string.reminder_unit_minutes),
+        stringResource(R.string.reminder_unit_hours),
+        stringResource(R.string.reminder_unit_days),
+        stringResource(R.string.reminder_unit_months),
+        stringResource(R.string.reminder_unit_years)
+    )
     val unitMultipliers = listOf(1, 60, 1440, 43200, 525600)
 
     val datePickerInitial = deadline?.let {
@@ -936,19 +945,19 @@ private fun GroupDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialTitle.isEmpty()) "Criar Categoria" else "Editar Categoria") },
+        title = { Text(if (initialTitle.isEmpty()) stringResource(R.string.group_dialog_title_add) else stringResource(R.string.group_dialog_title_edit)) },
         text = {
             Column {
                 TextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Nome da Categoria") },
+                    label = { Text(stringResource(R.string.field_group_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = hasDeadline, onCheckedChange = { hasDeadline = it })
-                    Text("Definir prazo")
+                    Text(stringResource(R.string.deadline_checkbox))
                 }
                 if (hasDeadline) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -959,8 +968,8 @@ private fun GroupDialog(
                         ) {
                             Text(
                                 if (deadline != null) {
-                                    SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(deadline)
-                                } else "Data"
+                                    SimpleDateFormat(stringResource(R.string.date_format_date), Locale.getDefault()).format(deadline)
+                                } else stringResource(R.string.date_placeholder)
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -970,15 +979,15 @@ private fun GroupDialog(
                         ) {
                             Text(
                                 if (deadline != null) {
-                                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(deadline)
-                                } else "Hora"
+                                    SimpleDateFormat(stringResource(R.string.date_format_time), Locale.getDefault()).format(deadline)
+                                } else stringResource(R.string.time_placeholder)
                             )
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = hasReminder, onCheckedChange = { hasReminder = it })
-                        Text("Avisar antes")
+                        Text(stringResource(R.string.reminder_checkbox))
                     }
                     if (hasReminder) {
                         Spacer(modifier = Modifier.height(4.dp))
@@ -1033,12 +1042,12 @@ private fun GroupDialog(
                     }
                 }
             ) {
-                Text("Confirmar")
+                Text(stringResource(R.string.action_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = Color(0xFF00CAEE))
+                Text(stringResource(R.string.action_cancel), color = Color(0xFF00CAEE))
             }
         }
     )
@@ -1060,12 +1069,12 @@ private fun GroupDialog(
                     }
                     showDatePicker = false
                 }) {
-                    Text("OK")
+                    Text(stringResource(R.string.date_picker_ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         ) {
@@ -1076,7 +1085,7 @@ private fun GroupDialog(
     if (showTimePicker) {
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            title = { Text("Selecionar hora") },
+            title = { Text(stringResource(R.string.time_picker_title)) },
             text = {
                 Box(
                     modifier = Modifier.fillMaxWidth(),
@@ -1096,12 +1105,12 @@ private fun GroupDialog(
                     deadline = cal.timeInMillis
                     showTimePicker = false
                 }) {
-                    Text("OK")
+                    Text(stringResource(R.string.date_picker_ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTimePicker = false }) {
-                    Text("Cancelar")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -1116,7 +1125,7 @@ private fun CreateChoiceDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("O que deseja criar?") },
+        title = { Text(stringResource(R.string.create_choice_title)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Button(
@@ -1125,7 +1134,7 @@ private fun CreateChoiceDialog(
                 ) {
                    // Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Criar Tarefa", color = Color.White)
+                    Text(stringResource(R.string.create_task), color = Color.White)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedButton(
@@ -1133,14 +1142,14 @@ private fun CreateChoiceDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Spacer(Modifier.width(8.dp).size(6.dp))
-                    Text("Criar Categoria", color = Color.White)
+                    Text(stringResource(R.string.create_category), color = Color.White)
                 }
             }
         },
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = Color(0xFF00CAEE))
+                Text(stringResource(R.string.action_cancel), color = Color(0xFF00CAEE))
             }
         }
     )

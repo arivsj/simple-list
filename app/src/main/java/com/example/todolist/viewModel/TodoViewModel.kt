@@ -1,12 +1,15 @@
 package com.example.todolist.viewModel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.todolist.R
 import com.example.todolist.domain.useCase.*
 import com.example.todolist.models.TodoGroup
 import com.example.todolist.models.TodoItem
 import com.example.todolist.notification.ReminderScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +31,7 @@ data class TodoUiState(
 
 @HiltViewModel
 class TodoViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val getAllTodosUseCase: GetAllTodosUseCase,
     private val addTodoUseCase: AddTodoUseCase,
     private val updateTodoUseCase: UpdateTodoUseCase,
@@ -144,7 +148,14 @@ class TodoViewModel @Inject constructor(
         }
         viewModelScope.launch {
             updateGroupUseCase(group.copy(isDone = newDone))
-            if (!newDone) {
+            val groupItems = _allItems.value.filter { it.groupId == group.id }
+            groupItems.forEach { item ->
+                reminderScheduler.cancel(item.id)
+                updateTodoUseCase(item.copy(isDone = newDone))
+            }
+            if (newDone) {
+                showCelebration()
+            } else {
                 scheduleReminder(group.id, group.title, group.deadline, group.reminderMinutes)
             }
         }
@@ -211,19 +222,25 @@ class TodoViewModel @Inject constructor(
             val updated = item.copy(isDone = !item.isDone)
             updateTodoUseCase(updated)
             if (updated.isDone) {
-                checkAllCompleted()
                 reminderScheduler.cancel(updated.id)
             } else {
                 scheduleReminder(updated.id, updated.title, updated.deadline, updated.reminderMinutes)
             }
             item.groupId?.let { groupId ->
                 val groupItems = _allItems.value.filter { it.groupId == groupId }
-                val allDone = groupItems.all { it.id == updated.id || it.isDone }
+                val allGroupDone = groupItems.all { it.id == updated.id || it.isDone }
                 val group = _roomGroups.value.find { it.id == groupId }
-                if (group != null && allDone && !group.isDone) {
+                if (group != null && allGroupDone && !group.isDone) {
                     updateGroupUseCase(group.copy(isDone = true))
-                } else if (group != null && !allDone && group.isDone) {
+                    if (updated.isDone) showCelebration()
+                } else if (group != null && !allGroupDone && group.isDone) {
                     updateGroupUseCase(group.copy(isDone = false))
+                }
+            }
+            if (item.groupId == null && updated.isDone) {
+                val standaloneItems = _allItems.value.filter { it.groupId == null }
+                if (standaloneItems.all { it.id == updated.id || it.isDone }) {
+                    showCelebration()
                 }
             }
         }
@@ -238,42 +255,12 @@ class TodoViewModel @Inject constructor(
         }
     }
 
-    private fun checkAllCompleted() {
-        val allDone = _allItems.value.all { it.isDone }
-        if (allDone && _allItems.value.isNotEmpty()) {
-            _celebrationPhrase.value = inspirationalPhrases.random()
-            _showCelebration.value = true
-        }
+    private fun showCelebration() {
+        _celebrationPhrase.value = appContext.resources.getStringArray(R.array.phrases).random()
+        _showCelebration.value = true
     }
 
     fun dismissCelebration() {
         _showCelebration.value = false
-    }
-
-    companion object {
-        private val inspirationalPhrases = listOf(
-            "A persistência é o caminho do êxito.",
-            "O sucesso nasce da vontade de vencer.",
-            "Tudo que você precisa está dentro de você.",
-            "Acredite no seu potencial infinito.",
-            "Cada passo conta na jornada.",
-            "Você é mais forte do que imagina.",
-            "O impossível é só questão de opinião.",
-            "Grandes realizações começam com pequenos passos.",
-            "Acredite que você pode, já está no meio do caminho.",
-            "Seu único limite é você mesmo.",
-            "A coragem não é a ausência do medo, mas a vitória sobre ele.",
-            "Sonhe grande, trabalhe duro.",
-            "A felicidade está nas pequenas conquistas diárias.",
-            "Você é capaz de coisas incríveis.",
-            "Não pare quando estiver cansado, pare quando estiver pronto.",
-            "O sucesso é a soma de pequenos esforços repetidos diariamente.",
-            "Acredite em si mesmo e todo o resto se encaixa.",
-            "Cada dia é uma nova oportunidade para brilhar.",
-            "Sua determinação é sua maior força.",
-            "Nunca é tarde demais para ser o que você poderia ter sido.",
-            "O segredo do sucesso é começar.",
-            "Você já venceu ao não ter desistido."
-        )
     }
 }

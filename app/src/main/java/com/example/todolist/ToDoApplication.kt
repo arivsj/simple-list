@@ -18,10 +18,10 @@ class ToDoApplication : Application() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 ReminderReceiver.CHANNEL_ID,
-                "Lembretes de prazo",
+                getString(R.string.notification_channel_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notificações de lembretes de prazo"
+                description = getString(R.string.notification_channel_description)
             }
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.createNotificationChannel(channel)

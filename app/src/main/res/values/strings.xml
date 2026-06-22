@@ -1,46 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <resources>
     <string name="app_name">Dito e Feito!</string>
-    <string name="action_settings">Settings</string>
-    <!-- Strings used for fragments for navigation -->
-    <string name="first_fragment_label">First Fragment</string>
-    <string name="second_fragment_label">Second Fragment</string>
-    <string name="next">Next</string>
-    <string name="previous">Previous</string>
 
-    <string name="lorem_ipsum">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
-        volutpat, dolor id interdum ullamcorper, risus dolor egestas lectus, sit amet mattis purus
-        dui nec risus. Maecenas non sodales nisi, vel dictum dolor. Class aptent taciti sociosqu ad
-        litora torquent per conubia nostra, per inceptos himenaeos. Suspendisse blandit eleifend
-        diam, vel rutrum tellus vulputate quis. Aliquam eget libero aliquet, imperdiet nisl a,
-        ornare ex. Sed rhoncus est ut libero porta lobortis. Fusce in dictum tellus.\n\n
-        Suspendisse interdum ornare ante. Aliquam nec cursus lorem. Morbi id magna felis. Vivamus
-        egestas, est a condimentum egestas, turpis nisl iaculis ipsum, in dictum tellus dolor sed
-        neque. Morbi tellus erat, dapibus ut sem a, iaculis tincidunt dui. Interdum et malesuada
-        fames ac ante ipsum primis in faucibus. Curabitur et eros porttitor, ultricies urna vitae,
-        molestie nibh. Phasellus at commodo eros, non aliquet metus. Sed maximus nisl nec dolor
-        bibendum, vel congue leo egestas.\n\n
-        Sed interdum tortor nibh, in sagittis risus mollis quis. Curabitur mi odio, condimentum sit
-        amet auctor at, mollis non turpis. Nullam pretium libero vestibulum, finibus orci vel,
-        molestie quam. Fusce blandit tincidunt nulla, quis sollicitudin libero facilisis et. Integer
-        interdum nunc ligula, et fermentum metus hendrerit id. Vestibulum lectus felis, dictum at
-        lacinia sit amet, tristique id quam. Cras eu consequat dui. Suspendisse sodales nunc ligula,
-        in lobortis sem porta sed. Integer id ultrices magna, in luctus elit. Sed a pellentesque
-        est.\n\n
-        Aenean nunc velit, lacinia sed dolor sed, ultrices viverra nulla. Etiam a venenatis nibh.
-        Morbi laoreet, tortor sed facilisis varius, nibh orci rhoncus nulla, id elementum leo dui
-        non lorem. Nam mollis ipsum quis auctor varius. Quisque elementum eu libero sed commodo. In
-        eros nisl, imperdiet vel imperdiet et, scelerisque a mauris. Pellentesque varius ex nunc,
-        quis imperdiet eros placerat ac. Duis finibus orci et est auctor tincidunt. Sed non viverra
-        ipsum. Nunc quis augue egestas, cursus lorem at, molestie sem. Morbi a consectetur ipsum, a
-        placerat diam. Etiam vulputate dignissim convallis. Integer faucibus mauris sit amet finibus
-        convallis.\n\n
-        Phasellus in aliquet mi. Pellentesque habitant morbi tristique senectus et netus et
-        malesuada fames ac turpis egestas. In volutpat arcu ut felis sagittis, in finibus massa
-        gravida. Pellentesque id tellus orci. Integer dictum, lorem sed efficitur ullamcorper,
-        libero justo consectetur ipsum, in mollis nisl ex sed nisl. Donec maximus ullamcorper
-        sodales. Praesent bibendum rhoncus tellus nec feugiat. In a ornare nulla. Donec rhoncus
-        libero vel nunc consequat, quis tincidunt nisl eleifend. Cras bibendum enim a justo luctus
-        vestibulum. Fusce dictum libero quis erat maximus, vitae volutpat diam dignissim.
-    </string>
+    <!-- Navigation -->
+    <string name="action_settings">Settings</string>
+    <string name="nav_back">Voltar</string>
+    <string name="app_title">Dito e Feito!</string>
+
+    <!-- FAB -->
+    <string name="fab_add">Adicionar</string>
+
+    <!-- Empty state -->
+    <string name="empty_group_tasks">Nenhuma tarefa nesta categoria</string>
+    <string name="empty_no_items">Nenhum item ainda</string>
+
+    <!-- Section headers -->
+    <string name="section_categories">Categorias</string>
+    <string name="section_tasks">Tarefas</string>
+
+    <!-- Celebration dialog -->
+    <string name="celebration_title">Parabéns!</string>
+    <string name="celebration_continue">Continuar</string>
+
+    <!-- Delete confirmation -->
+    <string name="delete_category_title">Excluir Categoria</string>
+    <string name="delete_category_message">Tem certeza que deseja excluir a categoria %s?</string>
+    <string name="delete_task_title">Excluir Tarefa</string>
+    <string name="delete_task_message">Tem certeza que deseja excluir a tarefa %s?</string>
+    <string name="action_delete">Excluir</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_confirm">Confirmar</string>
+
+    <!-- Icons content description -->
+    <string name="icon_category">Categoria</string>
+    <string name="icon_edit">Editar</string>
+    <string name="icon_delete">Excluir</string>
+    <string name="icon_drag">Arrastar</string>
+
+    <!-- Date/time display -->
+    <string name="deadline_prefix">Prazo: </string>
+    <string name="date_format_full">dd/MM/yyyy HH:mm</string>
+    <string name="date_format_date">dd/MM/yyyy</string>
+    <string name="date_format_time">HH:mm</string>
+    <string name="date_placeholder">Data</string>
+    <string name="time_placeholder">Hora</string>
+
+    <!-- Todo dialog -->
+    <string name="todo_dialog_title_add">Adicionar Tarefa</string>
+    <string name="todo_dialog_title_edit">Editar Tarefa</string>
+    <string name="field_title">Título</string>
+    <string name="field_description">Descrição</string>
+    <string name="deadline_checkbox">Definir prazo</string>
+    <string name="reminder_checkbox">Avisar antes</string>
+
+    <!-- Time picker -->
+    <string name="time_picker_title">Selecionar hora</string>
+    <string name="date_picker_ok">OK</string>
+    <string name="date_picker_cancel">Cancelar</string>
+
+    <!-- Group dialog -->
+    <string name="group_dialog_title_add">Criar Categoria</string>
+    <string name="group_dialog_title_edit">Editar Categoria</string>
+    <string name="field_group_name">Nome da Categoria</string>
+
+    <!-- Create choice dialog -->
+    <string name="create_choice_title">O que deseja criar?</string>
+    <string name="create_task">Criar Tarefa</string>
+    <string name="create_category">Criar Categoria</string>
+
+    <!-- Reminder unit labels -->
+    <string name="reminder_unit_minutes">minuto(s)</string>
+    <string name="reminder_unit_hours">hora(s)</string>
+    <string name="reminder_unit_days">dia(s)</string>
+    <string name="reminder_unit_months">mês(es)</string>
+    <string name="reminder_unit_years">ano(s)</string>
+
+    <!-- Notification channel -->
+    <string name="notification_channel_name">Lembretes de prazo</string>
+    <string name="notification_channel_description">Notificações de lembretes de prazo</string>
+
+    <!-- Notification -->
+    <string name="notification_default_title">Lembrete</string>
+    <string name="notification_content_title">Prazo se aproximando</string>
+
+    <!-- Inspirational phrases -->
+    <string-array name="phrases">
+        <item>Menos um item na lista, mais um passo em direção aos seus objetivos. - Dito e Feito!</item>
+        <item>O progresso é feito de pequenas vitórias diárias. - Dito e Feito!</item>
+        <item>Ação gera resultado. Continue com esse ritmo! - Dito e Feito!</item>
+        <item>O segredo da produtividade é simplesmente começar e, claro, terminar. - Dito e Feito!</item>
+        <item>Tarefa concluída! O seu \'eu\' do futuro agradece. - Dito e Feito!</item>
+        <item>Mais uma missão cumprida. Foco é o seu superpoder. - Dito e Feito!</item>
+        <item>Disciplina e mais uma linha riscada. Muito bem! - Dito e Feito!</item>
+        <item>Não subestime o poder de uma tarefa finalizada. É assim que grandes coisas acontecem. - Dito e Feito!</item>
+        <item>O momentum está a seu favor. Aproveite o embalo! - Dito e Feito!</item>
+        <item>A sensação de dever cumprido é o melhor combustível para a próxima tarefa. - Dito e Feito!</item>
+        <item>Cada passo concluído é um tijolo na construção das suas metas. - Dito e Feito!</item>
+        <item>Rumo ao topo, resolvendo uma coisa de cada vez. - Dito e Feito!</item>
+        <item>A constância venceu a procrastinação mais uma vez. - Dito e Feito!</item>
+        <item>Celebrar pequenas conquistas é o que nos mantém em movimento. - Dito e Feito!</item>
+        <item>Menos intenções no papel, mais realizações na prática. - Dito e Feito!</item>
+        <item>A melhor forma de prever o futuro é construí-lo agora. Parabéns pelo avanço! - Dito e Feito!</item>
+        <item>Um passo pequeno ainda é um grande avanço em relação a ficar parado. - Dito e Feito!</item>
+        <item>Você transformou intenção em ação. Orgulhe-se disso! - Dito e Feito!</item>
+        <item>A inércia perdeu mais uma batalha para o seu foco hoje. - Dito e Feito!</item>
+        <item>Riscar um item da lista é um verdadeiro alívio para a mente. - Dito e Feito!</item>
+        <item>Concentração e execução: a dupla perfeita que você acabou de aplicar. - Dito e Feito!</item>
+        <item>Toda grande jornada se faz completando uma etapa por vez. - Dito e Feito!</item>
+        <item>Feito é melhor que perfeito, mas hoje você entregou os dois. - Dito e Feito!</item>
+        <item>O hábito da conclusão é o traço em comum das pessoas brilhantes. - Dito e Feito!</item>
+        <item>Continue transformando o \'preciso fazer\' em \'já fiz\'. - Dito e Feito!</item>
+        <item>Sente esse alívio? É o som de mais uma tarefa concluída. - Dito e Feito!</item>
+        <item>Um passo de cada vez e o impossível se torna rotina. - Dito e Feito!</item>
+        <item>Você está construindo um império de bons hábitos. - Dito e Feito!</item>
+        <item>O mundo lá fora está cheio de distrações, mas o seu foco venceu hoje. - Dito e Feito!</item>
+        <item>Um presente para o seu \'eu\' de amanhã: uma pendência a menos hoje. - Dito e Feito!</item>
+        <item>Ação concluída vale mais que mil planos na gaveta. - Dito e Feito!</item>
+        <item>A roda gigante da produtividade não para. Excelente trabalho! - Dito e Feito!</item>
+        <item>O poder de um \'check\' na lista muda o rumo do seu dia. - Dito e Feito!</item>
+        <item>Mais uma vitória silenciosa que ecoa no seu futuro. - Dito e Feito!</item>
+        <item>A motivação pode até oscilar, mas a sua disciplina está de parabéns. - Dito e Feito!</item>
+        <item>Seu tempo é valioso e você acabou de usá-lo muito bem. - Dito e Feito!</item>
+        <item>A procrastinação mandou lembranças, mas você estava ocupado demais vencendo. - Dito e Feito!</item>
+        <item>Simples, direto e concluído. É assim que se faz. - Dito e Feito!</item>
+        <item>Energia bem gasta gera resultados reais. Continue assim. - Dito e Feito!</item>
+        <item>Você entrou no fluxo da produtividade. Aproveite a viagem! - Dito e Feito!</item>
+        <item>Não há tarefa pequena quando o objetivo final é progredir. - Dito e Feito!</item>
+        <item>A mentalidade de quem faz acontecer em plena ação. - Dito e Feito!</item>
+        <item>Aquele suspiro de alívio que só uma missão finalizada traz. - Dito e Feito!</item>
+        <item>Empilhando vitórias diárias, uma tarefa por vez. - Dito e Feito!</item>
+        <item>Você está no controle do seu dia e das suas realizações. - Dito e Feito!</item>
+        <item>A disciplina é o que transforma intenções em resultados palpáveis. - Dito e Feito!</item>
+        <item>Aquela caixa de seleção vazia não teve a menor chance contra você. - Dito e Feito!</item>
+        <item>Palavras inspiram, mas atitudes como essa geram resultados. - Dito e Feito!</item>
+        <item>O ponteiro do progresso se moveu mais um pouco graças a você. - Dito e Feito!</item>
+        <item>Você venceu a resistência inicial. O resto é história. - Dito e Feito!</item>
+        <item>Com o foco afiado, até as tarefas mais chatas parecem simples. - Dito e Feito!</item>
+        <item>Tornando a excelência uma rotina diária, um item por vez. - Dito e Feito!</item>
+        <item>Mantenha a engrenagem girando. Você está indo muito bem! - Dito e Feito!</item>
+        <item>Pequenas atitudes, grandes consequências. Bela conclusão. - Dito e Feito!</item>
+        <item>E assim, mais um item se despede da sua lista. - Dito e Feito!</item>
+        <item>A jornada de mil milhas começa com um único passo. - Lao Tzu</item>
+        <item>Não importa o quão devagar você vá, desde que não pare. - Confúcio</item>
+        <item>O sucesso é a soma de pequenos esforços repetidos dia após dia. - Robert Collier</item>
+        <item>A maneira de começar é parar de falar e começar a fazer. - Walt Disney</item>
+        <item>Faça o que você pode, com o que você tem, onde você estiver. - Theodore Roosevelt</item>
+        <item>A ação é a chave fundamental para todo o sucesso. - Pablo Picasso</item>
+        <item>Comece de onde você está. Use o que você tem. Faça o que você pode. - Arthur Ashe</item>
+        <item>Amadores sentam e esperam por inspiração. O resto de nós simplesmente se levanta e vai trabalhar. - Stephen King</item>
+        <item>A disciplina é a ponte entre metas e realizações. - Jim Rohn</item>
+        <item>Nada é particularmente difícil se você dividir em pequenas tarefas. - Henry Ford</item>
+        <item>Sempre parece impossível até que seja feito. - Nelson Mandela</item>
+        <item>O futuro depende do que você faz hoje. - Mahatma Gandhi</item>
+        <item>Grandes coisas não são feitas por impulso, mas por uma série de pequenas coisas trazidas juntas. - Vincent van Gogh</item>
+        <item>O segredo de progredir é começar. - Mark Twain</item>
+        <item>A motivação faz você começar, mas o hábito faz você continuar. - Jim Ryun</item>
+        <item>Você não precisa ser grande para começar, mas precisa começar para ser grande. - Zig Ziglar</item>
+        <item>Não espere o momento perfeito, pegue o momento e torne-o perfeito. - George Herbert</item>
+        <item>Eu acredito muito na sorte, e descubro que quanto mais eu trabalho, mais eu a tenho. - Thomas Jefferson</item>
+        <item>A vitória pertence ao mais perseverante. - Napoleão Bonaparte</item>
+        <item>Não deixe que o que você não pode fazer interfira no que você pode fazer. - John Wooden</item>
+    </string-array>
+
 </resources>

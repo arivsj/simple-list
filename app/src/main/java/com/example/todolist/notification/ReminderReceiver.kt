@@ -12,7 +12,7 @@ import com.example.todolist.R
 class ReminderReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val title = intent.getStringExtra(EXTRA_TITLE) ?: "Lembrete"
+        val title = intent.getStringExtra(EXTRA_TITLE) ?: context.getString(R.string.notification_default_title)
         val itemId = intent.getLongExtra(EXTRA_ITEM_ID, -1L)
 
         val notificationIntent = Intent(context, MainActivity::class.java).apply {
@@ -25,7 +25,7 @@ class ReminderReceiver : BroadcastReceiver() {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("Prazo se aproximando")
+            .setContentTitle(context.getString(R.string.notification_content_title))
             .setContentText(title)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
