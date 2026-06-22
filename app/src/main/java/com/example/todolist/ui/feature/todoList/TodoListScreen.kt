@@ -1,6 +1,7 @@
 package com.example.todolist.ui.feature.todoList
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,6 +43,8 @@ import kotlin.random.Random
 private sealed class UiItem {
     data class GroupItem(val group: TodoGroup) : UiItem()
     data class TaskItem(val item: TodoItem) : UiItem()
+    data object GroupHeader : UiItem()
+    data object TaskHeader : UiItem()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,6 +57,8 @@ fun TodoListScreen(viewModel: TodoViewModel) {
     var groupToEdit by remember { mutableStateOf<TodoGroup?>(null) }
     var showCreateChoice by remember { mutableStateOf(false) }
     var showCelebrationDialog by remember { mutableStateOf(false) }
+    var groupToDelete by remember { mutableStateOf<TodoGroup?>(null) }
+    var taskToDelete by remember { mutableStateOf<TodoItem?>(null) }
 
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -67,9 +73,11 @@ fun TodoListScreen(viewModel: TodoViewModel) {
         } else {
             buildList {
                 if (uiState.groups.isNotEmpty()) {
+                    add(UiItem.GroupHeader)
                     addAll(uiState.groups.map { UiItem.GroupItem(it) })
                 }
                 if (uiState.standaloneItems.isNotEmpty()) {
+                    add(UiItem.TaskHeader)
                     addAll(uiState.standaloneItems.map { UiItem.TaskItem(it) })
                 }
             }
@@ -225,6 +233,8 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                         when (item) {
                             is UiItem.GroupItem -> "group_${item.group.id}"
                             is UiItem.TaskItem -> "task_${item.item.id}"
+                            UiItem.GroupHeader -> "group_header"
+                            UiItem.TaskHeader -> "task_header"
                         }
                     }) { index, item ->
                         val isDragging = index == draggedItemIndex
@@ -248,7 +258,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                                         onClick = { viewModel.selectGroup(item.group) },
                                         onToggle = { viewModel.toggleGroup(item.group) },
                                         onEdit = { groupToEdit = item.group },
-                                        onDelete = { viewModel.deleteGroup(item.group) }
+                                        onDelete = { groupToDelete = item.group }
                                     )
                                 }
                                 is UiItem.TaskItem -> {
@@ -256,8 +266,24 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                                         item = item.item,
                                         elevation = elevation,
                                         onToggle = { viewModel.toggleTodo(item.item) },
-                                        onDelete = { viewModel.deleteTodo(item.item) },
+                                        onDelete = { taskToDelete = item.item },
                                         onEdit = { itemToEdit = item.item }
+                                    )
+                                }
+                                UiItem.GroupHeader -> {
+                                    Text(
+                                        text = "Grupos",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                    )
+                                }
+                                UiItem.TaskHeader -> {
+                                    Text(
+                                        text = "Tarefas",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                                     )
                                 }
                             }
@@ -384,6 +410,48 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             }
         )
     }
+
+    groupToDelete?.let { group ->
+        AlertDialog(
+            onDismissRequest = { groupToDelete = null },
+            title = { Text("Excluir Grupo") },
+            text = { Text("Tem certeza que deseja excluir o grupo \"${group.title}\"?") },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.deleteGroup(group)
+                    groupToDelete = null
+                }) {
+                    Text("Excluir")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { groupToDelete = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    taskToDelete?.let { task ->
+        AlertDialog(
+            onDismissRequest = { taskToDelete = null },
+            title = { Text("Excluir Tarefa") },
+            text = { Text("Tem certeza que deseja excluir a tarefa \"${task.title}\"?") },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.deleteTodo(task)
+                    taskToDelete = null
+                }) {
+                    Text("Excluir")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { taskToDelete = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -395,12 +463,14 @@ private fun GroupItemRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val groupBorderColor = if (group.isDone) Color(0xFF4CAF50) else Color(0xFF2196F3)
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        border = BorderStroke(2.dp, groupBorderColor)
     ) {
         Row(
             modifier = Modifier
@@ -415,7 +485,7 @@ private fun GroupItemRow(
                 tint = MaterialTheme.colorScheme.outline
             )
             Icon(
-                Icons.Default.DateRange,
+                Icons.Default.KeyboardArrowDown,
                 contentDescription = "Grupo",
                 modifier = Modifier.padding(end = 8.dp),
                 tint = if (group.isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
@@ -449,11 +519,13 @@ fun TodoItemRow(
     onDelete: () -> Unit,
     onEdit: () -> Unit
 ) {
+    val borderColor = if (item.isDone) Color(0xFF4CAF50) else Color(0xFFFFC107)
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        border = BorderStroke(2.dp, borderColor)
     ) {
         Row(
             modifier = Modifier
@@ -608,7 +680,7 @@ private fun CreateChoiceDialog(
                     onClick = onCreateGroup,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.Email, contentDescription = null)
+                    Icon(Icons.Default.DateRange, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Criar Grupo")
                 }

@@ -193,6 +193,16 @@ class TodoViewModel @Inject constructor(
             if (updated.isDone) {
                 checkAllCompleted()
             }
+            item.groupId?.let { groupId ->
+                val groupItems = _allItems.value.filter { it.groupId == groupId }
+                val allDone = groupItems.all { it.id == updated.id || it.isDone }
+                val group = _roomGroups.value.find { it.id == groupId }
+                if (group != null && allDone && !group.isDone) {
+                    updateGroupUseCase(group.copy(isDone = true))
+                } else if (group != null && !allDone && group.isDone) {
+                    updateGroupUseCase(group.copy(isDone = false))
+                }
+            }
         }
     }
 
