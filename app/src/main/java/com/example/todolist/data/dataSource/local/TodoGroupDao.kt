@@ -13,8 +13,14 @@ interface TodoGroupDao {
     @Query("SELECT * FROM todo_groups ORDER BY priority DESC, id DESC")
     fun getAllGroups(): Flow<List<TodoGroupEntity>>
 
+    @Query("SELECT * FROM todo_groups ORDER BY priority DESC, id DESC")
+    suspend fun getAllGroupsOnce(): List<TodoGroupEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertGroup(group: TodoGroupEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertGroups(groups: List<TodoGroupEntity>)
 
     @Update
     suspend fun updateGroup(group: TodoGroupEntity)

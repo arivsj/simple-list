@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.todolist.R
 import com.example.todolist.models.TodoGroup
+import com.example.todolist.stats.DashboardScreen
 import com.example.todolist.models.TodoItem
 import com.example.todolist.viewModel.TodoViewModel
 import kotlinx.coroutines.Job
@@ -95,6 +96,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
     var draggingOffset by remember { mutableFloatStateOf(0f) }
     var dragJob by remember { mutableStateOf<Job?>(null) }
     var draggedItemType by remember { mutableStateOf<Class<*>?>(null) }
+    var showDashboard by remember { mutableStateOf(false) }
 
     val mergedItems: List<UiItem> = remember(uiState.groups, uiState.standaloneItems, uiState.selectedGroup, uiState.groupItems) {
         if (uiState.selectedGroup != null) {
@@ -138,6 +140,20 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                     if (uiState.selectedGroup != null) {
                         IconButton(onClick = { viewModel.clearSelectedGroup() }) {
                             Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.nav_back))
+                        }
+                    }
+                },
+                actions = {
+                    Box {
+                        var showMenu by remember { mutableStateOf(false) }
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Mais opções")
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_dashboard)) },
+                                onClick = { showMenu = false; showDashboard = true }
+                            )
                         }
                     }
                 }
@@ -337,6 +353,10 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                 )
             }
         }
+    }
+
+    if (showDashboard) {
+        DashboardScreen(onBack = { showDashboard = false })
     }
 
     if (showCreateChoice) {

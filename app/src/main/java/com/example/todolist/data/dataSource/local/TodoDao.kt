@@ -13,6 +13,9 @@ interface TodoDao {
     @Query("SELECT * FROM todo_items ORDER BY priority DESC, id DESC")
     fun getAllItems(): Flow<List<TodoEntity>>
 
+    @Query("SELECT * FROM todo_items ORDER BY priority DESC, id DESC")
+    suspend fun getAllItemsOnce(): List<TodoEntity>
+
     @Query("SELECT * FROM todo_items WHERE groupId IS NULL ORDER BY priority DESC, id DESC")
     fun getStandaloneItems(): Flow<List<TodoEntity>>
 
@@ -21,6 +24,9 @@ interface TodoDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertItem(item: TodoEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertItems(items: List<TodoEntity>)
 
     @Update
     suspend fun updateItem(item: TodoEntity)

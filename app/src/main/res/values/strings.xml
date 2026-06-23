@@ -84,6 +84,7 @@
 
     <!-- Recurring -->
     <string name="already_completed_today">Tarefa já concluída hoje</string>
+    <string name="menu_dashboard">Meu Progresso</string>
 
     <!-- Repeat types -->
     <string name="repeat_none">Não repetir</string>
