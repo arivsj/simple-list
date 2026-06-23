@@ -79,6 +79,12 @@
     <string name="notification_channel_name">Lembretes de prazo</string>
     <string name="notification_channel_description">Notificações de lembretes de prazo</string>
 
+    <!-- Status -->
+    <string name="task_already_done">Tarefa já concluída</string>
+
+    <!-- Recurring -->
+    <string name="already_completed_today">Tarefa já concluída hoje</string>
+
     <!-- Repeat types -->
     <string name="repeat_none">Não repetir</string>
     <string name="repeat_daily">Diariamente</string>

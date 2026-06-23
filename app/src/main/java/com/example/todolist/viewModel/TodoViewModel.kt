@@ -55,6 +55,8 @@ class TodoViewModel @Inject constructor(
     private val _selectedGroup = MutableStateFlow<TodoGroup?>(null)
     private val _showCelebration = MutableStateFlow(false)
     private val _celebrationPhrase = MutableStateFlow("")
+    private val _toastMessage = MutableStateFlow<String?>(null)
+    val toastMessage: StateFlow<String?> = _toastMessage
 
     private var _dragGroups: List<TodoGroup>? = null
     private var _dragStandaloneItems: List<TodoItem>? = null
@@ -156,7 +158,17 @@ class TodoViewModel @Inject constructor(
             val groupItems = _allItems.value.filter { it.groupId == group.id }
             groupItems.forEach { item ->
                 reminderScheduler.cancel(item.id)
-                updateTodoUseCase(item.copy(isDone = newDone))
+                if (newDone && item.repeatType != null) {
+                    val nextDeadline = advanceDeadline(item.deadline ?: System.currentTimeMillis(), item.repeatType)
+                    updateTodoUseCase(item.copy(
+                        lastCompleted = System.currentTimeMillis(),
+                        deadline = nextDeadline,
+                        isDone = false
+                    ))
+                    scheduleReminder(item.id, item.title, nextDeadline, item.reminderMinutes)
+                } else {
+                    updateTodoUseCase(item.copy(isDone = newDone))
+                }
             }
             if (newDone) {
                 showCelebration()
@@ -199,10 +211,10 @@ class TodoViewModel @Inject constructor(
         }
     }
 
-    fun addTodo(title: String, description: String = "", priority: Int = 0, deadline: Long? = null, reminderMinutes: Int? = null, repeatType: Int? = null) {
+    fun addTodo(title: String, description: String = "", priority: Int = 0, deadline: Long? = null, reminderMinutes: Int? = null, repeatType: Int? = null, isDone: Boolean = false) {
         val groupId = _selectedGroup.value?.id
         viewModelScope.launch {
-            val itemId = addTodoUseCase(TodoItem(title = title, description = description, priority = priority, groupId = groupId, deadline = deadline, reminderMinutes = reminderMinutes, repeatType = repeatType))
+            val itemId = addTodoUseCase(TodoItem(title = title, description = description, priority = priority, groupId = groupId, deadline = deadline, reminderMinutes = reminderMinutes, repeatType = repeatType, isDone = isDone))
             scheduleReminder(itemId, title, deadline, reminderMinutes)
         }
     }
@@ -225,9 +237,13 @@ class TodoViewModel @Inject constructor(
     fun toggleTodo(item: TodoItem) {
         viewModelScope.launch {
             if (item.repeatType != null) {
+                if (isCompletedToday(item.lastCompleted)) {
+                    _toastMessage.value = appContext.getString(R.string.already_completed_today)
+                    return@launch
+                }
                 val nextDeadline = advanceDeadline(item.deadline ?: System.currentTimeMillis(), item.repeatType)
                 val updated = item.copy(
-                    lastCompleted = item.deadline ?: System.currentTimeMillis(),
+                    lastCompleted = System.currentTimeMillis(),
                     deadline = nextDeadline,
                     isDone = false
                 )
@@ -255,13 +271,18 @@ class TodoViewModel @Inject constructor(
                     }
                 }
                 if (item.groupId == null && updated.isDone) {
-                    val standaloneItems = _allItems.value.filter { it.groupId == null }
-                    if (standaloneItems.all { it.id == updated.id || it.isDone }) {
-                        showCelebration()
-                    }
+                    showCelebration()
                 }
             }
         }
+    }
+
+    private fun isCompletedToday(lastCompleted: Long?): Boolean {
+        if (lastCompleted == null) return false
+        val today = Calendar.getInstance()
+        val last = Calendar.getInstance().apply { timeInMillis = lastCompleted }
+        return last.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
+                last.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
     }
 
     private fun advanceDeadline(currentDeadline: Long, repeatType: Int): Long {
@@ -292,5 +313,9 @@ class TodoViewModel @Inject constructor(
 
     fun dismissCelebration() {
         _showCelebration.value = false
+    }
+
+    fun clearToastMessage() {
+        _toastMessage.value = null
     }
 }

@@ -2,6 +2,7 @@ package com.example.todolist.ui.feature.todoList
 
 import android.Manifest
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
@@ -36,6 +37,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -66,6 +68,7 @@ private sealed class UiItem {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoListScreen(viewModel: TodoViewModel) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var itemToEdit by remember { mutableStateOf<TodoItem?>(null) }
@@ -107,6 +110,15 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                     addAll(uiState.standaloneItems.map { UiItem.TaskItem(it) })
                 }
             }
+        }
+    }
+
+    val toastMessage by viewModel.toastMessage.collectAsState()
+    LaunchedEffect(toastMessage) {
+        val msg = toastMessage
+        if (msg != null) {
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            viewModel.clearToastMessage()
         }
     }
 
@@ -344,8 +356,8 @@ fun TodoListScreen(viewModel: TodoViewModel) {
     if (showAddDialog) {
         TodoDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { title, desc, priority, deadline, reminderMinutes, repeatType ->
-                viewModel.addTodo(title, desc, priority, deadline, reminderMinutes, repeatType)
+            onConfirm = { title, desc, priority, deadline, reminderMinutes, repeatType, isDone ->
+                viewModel.addTodo(title, desc, priority, deadline, reminderMinutes, repeatType, isDone)
                 showAddDialog = false
             }
         )
@@ -359,9 +371,14 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             initialDeadline = item.deadline,
             initialReminderMinutes = item.reminderMinutes,
             initialRepeatType = item.repeatType,
+            initialIsDone = item.isDone || (item.repeatType != null && item.lastCompleted?.let { last ->
+                val cal = Calendar.getInstance()
+                val lastCal = Calendar.getInstance().apply { timeInMillis = last }
+                cal.get(Calendar.YEAR) == lastCal.get(Calendar.YEAR) && cal.get(Calendar.DAY_OF_YEAR) == lastCal.get(Calendar.DAY_OF_YEAR)
+            } == true),
             onDismiss = { itemToEdit = null },
-            onConfirm = { title, desc, priority, deadline, reminderMinutes, repeatType ->
-                viewModel.updateTodo(item.copy(title = title, description = desc, priority = priority, deadline = deadline, reminderMinutes = reminderMinutes, repeatType = repeatType))
+            onConfirm = { title, desc, priority, deadline, reminderMinutes, repeatType, isDone ->
+                viewModel.updateTodo(item.copy(title = title, description = desc, priority = priority, deadline = deadline, reminderMinutes = reminderMinutes, repeatType = repeatType, isDone = isDone, lastCompleted = if (!isDone && item.repeatType != null) null else item.lastCompleted))
                 itemToEdit = null
             }
         )
@@ -560,7 +577,14 @@ fun TodoItemRow(
     onDelete: () -> Unit,
     onEdit: () -> Unit
 ) {
-    val borderColor = if (item.isDone) Color(0xFF4CAF50) else Color(0xFFFFC107)
+    val isRecurringCompletedToday = item.repeatType != null && item.lastCompleted?.let { last ->
+        val cal = Calendar.getInstance()
+        val lastCal = Calendar.getInstance().apply { timeInMillis = last }
+        cal.get(Calendar.YEAR) == lastCal.get(Calendar.YEAR) &&
+                cal.get(Calendar.DAY_OF_YEAR) == lastCal.get(Calendar.DAY_OF_YEAR)
+    } == true
+    val isDoneDisplay = item.isDone || isRecurringCompletedToday
+    val borderColor = if (isDoneDisplay) Color(0xFF4CAF50) else Color(0xFFFFC107)
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -576,12 +600,12 @@ fun TodoItemRow(
         ) {
             Icon(
                 Icons.Default.Menu,
-contentDescription = stringResource(R.string.icon_drag),
+ contentDescription = stringResource(R.string.icon_drag),
                 modifier = Modifier.padding(end = 8.dp),
                 tint = MaterialTheme.colorScheme.outline
             )
             Checkbox(
-                checked = item.isDone,
+                checked = isDoneDisplay,
                 onCheckedChange = { onToggle() }
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -589,7 +613,7 @@ contentDescription = stringResource(R.string.icon_drag),
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleMedium,
-                    textDecoration = if (item.isDone) TextDecoration.LineThrough else null
+                    textDecoration = if (isDoneDisplay) TextDecoration.LineThrough else null
                 )
                 if (item.description.isNotEmpty()) {
                     Text(
@@ -625,13 +649,13 @@ contentDescription = stringResource(R.string.icon_drag),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        if (item.lastCompleted != null) {
-                            Text(
-                                text = " · ${stringResource(R.string.repeat_last_completed)}${SimpleDateFormat("dd/MM", Locale.getDefault()).format(item.lastCompleted)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
+                    }
+                    if (item.lastCompleted != null) {
+                        Text(
+                            text = stringResource(R.string.repeat_last_completed) + SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(item.lastCompleted),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
                     }
                 }
             }
@@ -654,8 +678,9 @@ fun TodoDialog(
     initialDeadline: Long? = null,
     initialReminderMinutes: Int? = null,
     initialRepeatType: Int? = null,
+    initialIsDone: Boolean = false,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, Int, Long?, Int?, Int?) -> Unit
+    onConfirm: (String, String, Int, Long?, Int?, Int?, Boolean) -> Unit
 ) {
     var title by remember { mutableStateOf(initialTitle) }
     var desc by remember { mutableStateOf(initialDesc) }
@@ -667,6 +692,8 @@ fun TodoDialog(
     var hasReminder by remember { mutableStateOf(initialReminderMinutes != null) }
     var repeatType by remember { mutableIntStateOf(initialRepeatType ?: 0) }
     var showRepeatMenu by remember { mutableStateOf(false) }
+    var currentIsDone by remember { mutableStateOf(initialIsDone) }
+
     val repeatLabels = listOf(
         stringResource(R.string.repeat_none),
         stringResource(R.string.repeat_daily),
@@ -773,6 +800,11 @@ fun TodoDialog(
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.task_already_done), modifier = Modifier.weight(1f))
+                    Switch(checked = currentIsDone, onCheckedChange = { currentIsDone = it })
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = hasDeadline, onCheckedChange = { hasDeadline = it })
@@ -857,7 +889,7 @@ fun TodoDialog(
                         val reminderMinutes = if (hasDeadline && hasReminder) {
                             (reminderValue.toIntOrNull() ?: 0) * unitMultipliers[reminderUnitIndex]
                         } else null
-                        onConfirm(title, desc, priority, deadline, if (reminderMinutes == 0) null else reminderMinutes, if (repeatType == 0) null else repeatType)
+                        onConfirm(title, desc, priority, deadline, if (reminderMinutes == 0) null else reminderMinutes, if (repeatType == 0) null else repeatType, currentIsDone)
                     }
                 }
             ) {
