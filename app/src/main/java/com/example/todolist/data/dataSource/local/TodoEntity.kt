@@ -14,7 +14,9 @@ data class TodoEntity(
     val priority: Int,
     val groupId: Long? = null,
     val deadline: Long? = null,
-    val reminderMinutes: Int? = null
+    val reminderMinutes: Int? = null,
+    val repeatType: Int? = null,
+    val lastCompleted: Long? = null
 )
 
 fun TodoEntity.toDomain() = TodoItem(
@@ -25,7 +27,9 @@ fun TodoEntity.toDomain() = TodoItem(
     priority = priority,
     groupId = groupId,
     deadline = deadline,
-    reminderMinutes = reminderMinutes
+    reminderMinutes = reminderMinutes,
+    repeatType = repeatType,
+    lastCompleted = lastCompleted
 )
 
 fun TodoItem.toEntity() = TodoEntity(
@@ -36,5 +40,7 @@ fun TodoItem.toEntity() = TodoEntity(
     priority = priority,
     groupId = groupId,
     deadline = deadline,
-    reminderMinutes = reminderMinutes
+    reminderMinutes = reminderMinutes,
+    repeatType = repeatType,
+    lastCompleted = lastCompleted
 )

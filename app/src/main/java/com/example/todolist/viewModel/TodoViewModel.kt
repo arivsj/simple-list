@@ -4,6 +4,11 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.todolist.R
+import com.example.todolist.models.TodoItem.Companion.REPEAT_DAILY
+import com.example.todolist.models.TodoItem.Companion.REPEAT_MONTHLY
+import com.example.todolist.models.TodoItem.Companion.REPEAT_WEEKLY
+import com.example.todolist.models.TodoItem.Companion.REPEAT_YEARLY
+import java.util.Calendar
 import com.example.todolist.domain.useCase.*
 import com.example.todolist.models.TodoGroup
 import com.example.todolist.models.TodoItem
@@ -194,10 +199,10 @@ class TodoViewModel @Inject constructor(
         }
     }
 
-    fun addTodo(title: String, description: String = "", priority: Int = 0, deadline: Long? = null, reminderMinutes: Int? = null) {
+    fun addTodo(title: String, description: String = "", priority: Int = 0, deadline: Long? = null, reminderMinutes: Int? = null, repeatType: Int? = null) {
         val groupId = _selectedGroup.value?.id
         viewModelScope.launch {
-            val itemId = addTodoUseCase(TodoItem(title = title, description = description, priority = priority, groupId = groupId, deadline = deadline, reminderMinutes = reminderMinutes))
+            val itemId = addTodoUseCase(TodoItem(title = title, description = description, priority = priority, groupId = groupId, deadline = deadline, reminderMinutes = reminderMinutes, repeatType = repeatType))
             scheduleReminder(itemId, title, deadline, reminderMinutes)
         }
     }
@@ -219,30 +224,55 @@ class TodoViewModel @Inject constructor(
 
     fun toggleTodo(item: TodoItem) {
         viewModelScope.launch {
-            val updated = item.copy(isDone = !item.isDone)
-            updateTodoUseCase(updated)
-            if (updated.isDone) {
+            if (item.repeatType != null) {
+                val nextDeadline = advanceDeadline(item.deadline ?: System.currentTimeMillis(), item.repeatType)
+                val updated = item.copy(
+                    lastCompleted = item.deadline ?: System.currentTimeMillis(),
+                    deadline = nextDeadline,
+                    isDone = false
+                )
+                updateTodoUseCase(updated)
                 reminderScheduler.cancel(updated.id)
+                scheduleReminder(updated.id, updated.title, nextDeadline, updated.reminderMinutes)
+                showCelebration()
             } else {
-                scheduleReminder(updated.id, updated.title, updated.deadline, updated.reminderMinutes)
-            }
-            item.groupId?.let { groupId ->
-                val groupItems = _allItems.value.filter { it.groupId == groupId }
-                val allGroupDone = groupItems.all { it.id == updated.id || it.isDone }
-                val group = _roomGroups.value.find { it.id == groupId }
-                if (group != null && allGroupDone && !group.isDone) {
-                    updateGroupUseCase(group.copy(isDone = true))
-                    if (updated.isDone) showCelebration()
-                } else if (group != null && !allGroupDone && group.isDone) {
-                    updateGroupUseCase(group.copy(isDone = false))
+                val updated = item.copy(isDone = !item.isDone)
+                updateTodoUseCase(updated)
+                if (updated.isDone) {
+                    reminderScheduler.cancel(updated.id)
+                } else {
+                    scheduleReminder(updated.id, updated.title, updated.deadline, updated.reminderMinutes)
+                }
+                item.groupId?.let { groupId ->
+                    val groupItems = _allItems.value.filter { it.groupId == groupId }
+                    val allGroupDone = groupItems.all { it.id == updated.id || it.isDone }
+                    val group = _roomGroups.value.find { it.id == groupId }
+                    if (group != null && allGroupDone && !group.isDone) {
+                        updateGroupUseCase(group.copy(isDone = true))
+                        if (updated.isDone) showCelebration()
+                    } else if (group != null && !allGroupDone && group.isDone) {
+                        updateGroupUseCase(group.copy(isDone = false))
+                    }
+                }
+                if (item.groupId == null && updated.isDone) {
+                    val standaloneItems = _allItems.value.filter { it.groupId == null }
+                    if (standaloneItems.all { it.id == updated.id || it.isDone }) {
+                        showCelebration()
+                    }
                 }
             }
-            if (item.groupId == null && updated.isDone) {
-                val standaloneItems = _allItems.value.filter { it.groupId == null }
-                if (standaloneItems.all { it.id == updated.id || it.isDone }) {
-                    showCelebration()
-                }
-            }
+        }
+    }
+
+    private fun advanceDeadline(currentDeadline: Long, repeatType: Int): Long {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = currentDeadline
+        return when (repeatType) {
+            REPEAT_DAILY -> cal.apply { add(Calendar.DAY_OF_YEAR, 1) }.timeInMillis
+            REPEAT_WEEKLY -> cal.apply { add(Calendar.WEEK_OF_YEAR, 1) }.timeInMillis
+            REPEAT_MONTHLY -> cal.apply { add(Calendar.MONTH, 1) }.timeInMillis
+            REPEAT_YEARLY -> cal.apply { add(Calendar.YEAR, 1) }.timeInMillis
+            else -> currentDeadline
         }
     }
 

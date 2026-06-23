@@ -79,6 +79,18 @@
     <string name="notification_channel_name">Lembretes de prazo</string>
     <string name="notification_channel_description">Notificações de lembretes de prazo</string>
 
+    <!-- Repeat types -->
+    <string name="repeat_none">Não repetir</string>
+    <string name="repeat_daily">Diariamente</string>
+    <string name="repeat_weekly">Semanalmente</string>
+    <string name="repeat_monthly">Mensalmente</string>
+    <string name="repeat_yearly">Anualmente</string>
+    <string name="repeat_label_daily">Diário</string>
+    <string name="repeat_label_weekly">Semanal</string>
+    <string name="repeat_label_monthly">Mensal</string>
+    <string name="repeat_label_yearly">Anual</string>
+    <string name="repeat_last_completed">Concluída: </string>
+
     <!-- Notification -->
     <string name="notification_default_title">Lembrete</string>
     <string name="notification_content_title">Prazo se aproximando</string>

@@ -3,7 +3,7 @@ package com.example.todolist.data.dataSource.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
-@Database(entities = [TodoEntity::class, TodoGroupEntity::class], version = 4)
+@Database(entities = [TodoEntity::class, TodoGroupEntity::class], version = 5)
 abstract class TodoDatabase : RoomDatabase() {
     abstract fun todoDao(): TodoDao
     abstract fun todoGroupDao(): TodoGroupDao

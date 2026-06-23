@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -342,8 +344,8 @@ fun TodoListScreen(viewModel: TodoViewModel) {
     if (showAddDialog) {
         TodoDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { title, desc, priority, deadline, reminderMinutes ->
-                viewModel.addTodo(title, desc, priority, deadline, reminderMinutes)
+            onConfirm = { title, desc, priority, deadline, reminderMinutes, repeatType ->
+                viewModel.addTodo(title, desc, priority, deadline, reminderMinutes, repeatType)
                 showAddDialog = false
             }
         )
@@ -356,9 +358,10 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             initialPriority = item.priority,
             initialDeadline = item.deadline,
             initialReminderMinutes = item.reminderMinutes,
+            initialRepeatType = item.repeatType,
             onDismiss = { itemToEdit = null },
-            onConfirm = { title, desc, priority, deadline, reminderMinutes ->
-                viewModel.updateTodo(item.copy(title = title, description = desc, priority = priority, deadline = deadline, reminderMinutes = reminderMinutes))
+            onConfirm = { title, desc, priority, deadline, reminderMinutes, repeatType ->
+                viewModel.updateTodo(item.copy(title = title, description = desc, priority = priority, deadline = deadline, reminderMinutes = reminderMinutes, repeatType = repeatType))
                 itemToEdit = null
             }
         )
@@ -601,6 +604,36 @@ contentDescription = stringResource(R.string.icon_drag),
                         color = MaterialTheme.colorScheme.error
                     )
                 }
+                if (item.repeatType != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        val label = when (item.repeatType) {
+                            1 -> stringResource(R.string.repeat_label_daily)
+                            2 -> stringResource(R.string.repeat_label_weekly)
+                            3 -> stringResource(R.string.repeat_label_monthly)
+                            4 -> stringResource(R.string.repeat_label_yearly)
+                            else -> ""
+                        }
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        if (item.lastCompleted != null) {
+                            Text(
+                                text = " · ${stringResource(R.string.repeat_last_completed)}${SimpleDateFormat("dd/MM", Locale.getDefault()).format(item.lastCompleted)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+                }
             }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.icon_edit))
@@ -620,8 +653,9 @@ fun TodoDialog(
     initialPriority: Int = 0,
     initialDeadline: Long? = null,
     initialReminderMinutes: Int? = null,
+    initialRepeatType: Int? = null,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, Int, Long?, Int?) -> Unit
+    onConfirm: (String, String, Int, Long?, Int?, Int?) -> Unit
 ) {
     var title by remember { mutableStateOf(initialTitle) }
     var desc by remember { mutableStateOf(initialDesc) }
@@ -631,6 +665,15 @@ fun TodoDialog(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var hasReminder by remember { mutableStateOf(initialReminderMinutes != null) }
+    var repeatType by remember { mutableIntStateOf(initialRepeatType ?: 0) }
+    var showRepeatMenu by remember { mutableStateOf(false) }
+    val repeatLabels = listOf(
+        stringResource(R.string.repeat_none),
+        stringResource(R.string.repeat_daily),
+        stringResource(R.string.repeat_weekly),
+        stringResource(R.string.repeat_monthly),
+        stringResource(R.string.repeat_yearly)
+    )
     var reminderValue by remember { mutableStateOf(
         initialReminderMinutes?.let { mins ->
             when {
@@ -708,6 +751,29 @@ fun TodoDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
+                Box {
+                    OutlinedButton(onClick = { showRepeatMenu = true }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(repeatLabels[repeatType])
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = showRepeatMenu,
+                        onDismissRequest = { showRepeatMenu = false }
+                    ) {
+                        repeatLabels.forEachIndexed { index, label ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    repeatType = index
+                                    showRepeatMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = hasDeadline, onCheckedChange = { hasDeadline = it })
                     Text(stringResource(R.string.deadline_checkbox))
@@ -781,7 +847,7 @@ fun TodoDialog(
                             }
                         }
                     }
-                }
+            }
             }
         },
         confirmButton = {
@@ -791,7 +857,7 @@ fun TodoDialog(
                         val reminderMinutes = if (hasDeadline && hasReminder) {
                             (reminderValue.toIntOrNull() ?: 0) * unitMultipliers[reminderUnitIndex]
                         } else null
-                        onConfirm(title, desc, priority, deadline, if (reminderMinutes == 0) null else reminderMinutes)
+                        onConfirm(title, desc, priority, deadline, if (reminderMinutes == 0) null else reminderMinutes, if (repeatType == 0) null else repeatType)
                     }
                 }
             ) {
