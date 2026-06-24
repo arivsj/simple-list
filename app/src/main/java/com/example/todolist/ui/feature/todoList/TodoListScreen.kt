@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AdsClick
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
@@ -623,7 +624,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             },
             icon = {
                 Icon(
-                    Icons.Default.CheckCircle,
+                    Icons.Default.AutoAwesome,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(48.dp)
@@ -671,7 +672,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { groupToDelete = null }) {
-                    Text(stringResource(R.string.action_cancel), color = Color(0xFF00CAEE))
+                    Text(stringResource(R.string.action_cancel), color = Color(0xFF548FD7))
                 }
             }
         )
@@ -692,7 +693,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { taskToDelete = null }) {
-                    Text(stringResource(R.string.action_cancel), color = Color(0xFF00CAEE))
+                    Text(stringResource(R.string.action_cancel), color = Color(0xFF548FD7))
                 }
             }
         )
@@ -742,7 +743,7 @@ private fun GroupItemRow(
                             Toast.makeText(context, "Segure e arraste para reposicionar", Toast.LENGTH_SHORT).show()
                         }
                     },
-                tint = if (group.isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                tint = if (group.isDone) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline
             )
             Checkbox(
                 checked = group.isDone,
@@ -852,7 +853,7 @@ fun TodoItemRow(
                             Toast.makeText(context, "Segure e arraste para reposicionar", Toast.LENGTH_SHORT).show()
                         }
                     },
-                tint = MaterialTheme.colorScheme.outline
+                tint = if (isDoneDisplay) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outline
             )
             Checkbox(
                 checked = isDoneDisplay,
@@ -1148,7 +1149,7 @@ fun TodoDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel), color = Color(0xFF00CAEE))
+                Text(stringResource(R.string.action_cancel), color = Color(0xFF548FD7))
             }
         }
     )
@@ -1395,7 +1396,7 @@ private fun GroupDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel), color = Color(0xFF00CAEE))
+                Text(stringResource(R.string.action_cancel), color = Color(0xFF548FD7))
             }
         }
     )
@@ -1497,7 +1498,7 @@ private fun CreateChoiceDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel), color = Color(0xFF00CAEE))
+                Text(stringResource(R.string.action_cancel), color = Color(0xFF548FD7))
             }
         }
     )
