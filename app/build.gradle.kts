@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.todolist"
-        minSdk = 33
+        minSdk = 28
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.activity.compose)
     implementation(libs.navigation.compose)
     debugImplementation(libs.compose.ui.tooling)

@@ -52,11 +52,14 @@ class TodoViewModel @Inject constructor(
 
     private val _roomGroups = MutableStateFlow<List<TodoGroup>>(emptyList())
     private val _allItems = MutableStateFlow<List<TodoItem>>(emptyList())
+    val allItems: StateFlow<List<TodoItem>> = _allItems
     private val _selectedGroup = MutableStateFlow<TodoGroup?>(null)
     private val _showCelebration = MutableStateFlow(false)
     private val _celebrationPhrase = MutableStateFlow("")
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage
+    private val _highlightItemId = MutableStateFlow<Long?>(null)
+    val highlightItemId: StateFlow<Long?> = _highlightItemId
 
     private var _dragGroups: List<TodoGroup>? = null
     private var _dragStandaloneItems: List<TodoItem>? = null
@@ -120,7 +123,8 @@ class TodoViewModel @Inject constructor(
 
     fun addGroup(title: String, deadline: Long? = null, reminderMinutes: Int? = null) {
         viewModelScope.launch {
-            val groupId = addGroupUseCase(TodoGroup(title = title, deadline = deadline, reminderMinutes = reminderMinutes))
+            val maxPriority = (_roomGroups.value.maxOfOrNull { it.priority } ?: 0) + 1
+            val groupId = addGroupUseCase(TodoGroup(title = title, deadline = deadline, reminderMinutes = reminderMinutes, priority = maxPriority))
             scheduleReminder(groupId, title, deadline, reminderMinutes)
         }
     }
@@ -214,9 +218,17 @@ class TodoViewModel @Inject constructor(
     fun addTodo(title: String, description: String = "", priority: Int = 0, deadline: Long? = null, reminderMinutes: Int? = null, repeatType: Int? = null, isDone: Boolean = false) {
         val groupId = _selectedGroup.value?.id
         viewModelScope.launch {
-            val itemId = addTodoUseCase(TodoItem(title = title, description = description, priority = priority, groupId = groupId, deadline = deadline, reminderMinutes = reminderMinutes, repeatType = repeatType, isDone = isDone))
+            val items = if (groupId != null) _allItems.value.filter { it.groupId == groupId }
+                        else _allItems.value.filter { it.groupId == null }
+            val maxPriority = (items.maxOfOrNull { it.priority } ?: 0) + 1
+            val itemId = addTodoUseCase(TodoItem(title = title, description = description, priority = maxPriority, groupId = groupId, deadline = deadline, reminderMinutes = reminderMinutes, repeatType = repeatType, isDone = isDone))
+            _highlightItemId.value = itemId
             scheduleReminder(itemId, title, deadline, reminderMinutes)
         }
+    }
+
+    fun clearHighlightItemId() {
+        _highlightItemId.value = null
     }
 
     fun updateTodo(item: TodoItem) {
@@ -252,7 +264,8 @@ class TodoViewModel @Inject constructor(
                 scheduleReminder(updated.id, updated.title, nextDeadline, updated.reminderMinutes)
                 showCelebration()
             } else {
-                val updated = item.copy(isDone = !item.isDone)
+                val becomingDone = !item.isDone
+                val updated = item.copy(isDone = becomingDone, priority = if (becomingDone) 0 else item.priority)
                 updateTodoUseCase(updated)
                 if (updated.isDone) {
                     reminderScheduler.cancel(updated.id)

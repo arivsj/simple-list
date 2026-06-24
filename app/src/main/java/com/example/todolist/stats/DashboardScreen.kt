@@ -70,6 +70,10 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsState()
     val periods = listOf(0 to "Todos", 7 to "7d", 30 to "30d", 60 to "60d", 90 to "90d")
 
+    LaunchedEffect(Unit) {
+        viewModel.loadStats()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

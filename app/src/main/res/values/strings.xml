@@ -98,6 +98,9 @@
     <string name="repeat_label_yearly">Anual</string>
     <string name="repeat_last_completed">Concluída: </string>
 
+    <!-- Stats -->
+    <string name="stats_tasks_completed">concluídas</string>
+
     <!-- Notification -->
     <string name="notification_default_title">Lembrete</string>
     <string name="notification_content_title">Prazo se aproximando</string>

@@ -3,20 +3,26 @@ package com.example.todolist.ui.feature.todoList
 import android.Manifest
 import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Wysiwyg
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AdsClick
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
@@ -32,18 +38,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.todolist.R
 import com.example.todolist.models.TodoGroup
@@ -115,6 +128,31 @@ fun TodoListScreen(viewModel: TodoViewModel) {
         }
     }
 
+    var newItemIds by remember { mutableStateOf(setOf<Long>()) }
+    val highlightItemId by viewModel.highlightItemId.collectAsState()
+    LaunchedEffect(highlightItemId) {
+        highlightItemId?.let { id ->
+            newItemIds = newItemIds + id
+            var targetIndex = -1
+            repeat(20) {
+                targetIndex = mergedItems.indexOfFirst { item ->
+                    when (item) {
+                        is UiItem.TaskItem -> item.item.id == id
+                        else -> false
+                    }
+                }
+                if (targetIndex >= 0) return@repeat
+                delay(100)
+            }
+            if (targetIndex >= 0) {
+                listState.animateScrollToItem(targetIndex)
+            }
+            delay(2500)
+            newItemIds = newItemIds - id
+            viewModel.clearHighlightItemId()
+        }
+    }
+
     val toastMessage by viewModel.toastMessage.collectAsState()
     LaunchedEffect(toastMessage) {
         val msg = toastMessage
@@ -123,6 +161,21 @@ fun TodoListScreen(viewModel: TodoViewModel) {
             viewModel.clearToastMessage()
         }
     }
+
+    val fabSize = 34.dp
+    val infiniteTransition = rememberInfiniteTransition()
+    val rainbowRotation by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing), RepeatMode.Restart)
+    )
+    val iconScale by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 1.25f,
+        animationSpec = infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse)
+    )
+    val rainbowColors = listOf(
+        Color(0xFFFF0000), Color(0xFFFF7F00), Color(0xFFFFFF00),
+        Color(0xFF00FF00), Color(0xFF0000FF), Color(0xFF4B0082), Color(0xFF8B00FF)
+    )
 
     LaunchedEffect(uiState.showCelebration) {
         if (uiState.showCelebration) {
@@ -144,30 +197,58 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                     }
                 },
                 actions = {
-                    Box {
-                        var showMenu by remember { mutableStateOf(false) }
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Mais opções")
+                    if (uiState.selectedGroup != null) {
+                        IconButton(onClick = { groupToEdit = uiState.selectedGroup }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar categoria")
                         }
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_dashboard)) },
-                                onClick = { showMenu = false; showDashboard = true }
-                            )
+                    } else {
+                        Box {
+                            var showMenu by remember { mutableStateOf(false) }
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "Mais opções")
+                            }
+                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.menu_dashboard)) },
+                                    onClick = { showMenu = false; showDashboard = true }
+                                )
+                            }
                         }
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                if (uiState.selectedGroup != null) {
-                    showAddDialog = true
-                } else {
-                    showCreateChoice = true
+            Box(
+                modifier = Modifier
+                    .size(fabSize + 4.dp)
+                    .drawBehind {
+                        val strokeWidth = 3.dp.toPx()
+                        rotate(rainbowRotation, pivot = center) {
+                            drawCircle(
+                                brush = Brush.sweepGradient(rainbowColors, center = center),
+                                radius = fabSize.toPx() / 2,
+                                style = Stroke(width = strokeWidth)
+                            )
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        if (uiState.selectedGroup != null) showAddDialog = true
+                        else showCreateChoice = true
+                    },
+                    modifier = Modifier.size(fabSize),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = stringResource(R.string.fab_add),
+                        modifier = Modifier.graphicsLayer(scaleX = iconScale, scaleY = iconScale)
+                    )
                 }
-            }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.fab_add))
             }
         }
     ) { padding ->
@@ -176,7 +257,12 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            if (uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 60.dp)
+            ) {
+                if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
@@ -226,29 +312,6 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                                             dragPosition > itemTop && dragPosition < itemBottom
                                         }
 
-                                    if (targetItem != null) {
-                                        val targetIndexInType = mergedItems.withIndex()
-                                            .filter { it.value::class.java == type }
-                                            .indexOfFirst { it.index == targetItem.index }
-
-                                        val currentIndexInType = mergedItems.withIndex()
-                                            .filter { it.value::class.java == type }
-                                            .indexOfFirst { it.index == currentIndex }
-
-                                        if (targetIndexInType >= 0 && currentIndexInType >= 0) {
-                                            when (type) {
-                                                UiItem.GroupItem::class.java -> {
-                                                    viewModel.moveGroup(currentIndexInType, targetIndexInType)
-                                                }
-                                                UiItem.TaskItem::class.java -> {
-                                                    viewModel.moveTodo(currentIndexInType, targetIndexInType)
-                                                }
-                                            }
-                                            draggedItemIndex = targetItem.index
-                                            draggingOffset += (draggedInfo.offset - targetItem.offset)
-                                        }
-                                    }
-
                                     if (dragJob?.isActive != true) {
                                         val viewportHeight = listState.layoutInfo.viewportEndOffset
                                         val dragY = draggedInfo.offset + draggingOffset
@@ -267,9 +330,43 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                                 },
                                 onDragEnd = {
                                     val savedType = draggedItemType
+                                    val startIndex = draggedItemIndex
+                                    val dragOffset = draggingOffset
                                     draggedItemIndex = null
                                     draggingOffset = 0f
                                     draggedItemType = null
+
+                                    if (startIndex != null && savedType != null && dragOffset != 0f) {
+                                        val draggedInfo = listState.layoutInfo.visibleItemsInfo
+                                            .firstOrNull { it.index == startIndex }
+                                        if (draggedInfo != null) {
+                                            val dragPosition = draggedInfo.offset + dragOffset + (draggedInfo.size / 2)
+                                            val targetItem = listState.layoutInfo.visibleItemsInfo
+                                                .firstOrNull { info ->
+                                                    if (info.index !in mergedItems.indices) return@firstOrNull false
+                                                    if (mergedItems[info.index]::class.java != savedType) return@firstOrNull false
+                                                    if (info.index == startIndex) return@firstOrNull false
+                                                    dragPosition > info.offset && dragPosition < info.offset + info.size
+                                                }
+                                            if (targetItem != null) {
+                                                val targetIndexInType = mergedItems.withIndex()
+                                                    .filter { it.value::class.java == savedType }
+                                                    .indexOfFirst { it.index == targetItem.index }
+                                                val currentIndexInType = mergedItems.withIndex()
+                                                    .filter { it.value::class.java == savedType }
+                                                    .indexOfFirst { it.index == startIndex }
+                                                if (targetIndexInType >= 0 && currentIndexInType >= 0) {
+                                                    when (savedType) {
+                                                        UiItem.GroupItem::class.java ->
+                                                            viewModel.moveGroup(currentIndexInType, targetIndexInType)
+                                                        UiItem.TaskItem::class.java ->
+                                                            viewModel.moveTodo(currentIndexInType, targetIndexInType)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
                                     when (savedType) {
                                         UiItem.GroupItem::class.java -> viewModel.saveGroupsOrder()
                                         UiItem.TaskItem::class.java -> viewModel.saveOrder()
@@ -306,8 +403,18 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                         ) {
                             when (item) {
                                 is UiItem.GroupItem -> {
+                                    val allItems by viewModel.allItems.collectAsState()
+                                    val groupItems = allItems.filter { it.groupId == item.group.id }
+                                    val cal = Calendar.getInstance()
                                     GroupItemRow(
                                         group = item.group,
+                                        totalTasks = groupItems.size,
+                                        doneTasks = groupItems.count { i ->
+                                            i.isDone || (i.repeatType != null && i.lastCompleted?.let { last ->
+                                                val lastCal = Calendar.getInstance().apply { timeInMillis = last }
+                                                cal.get(Calendar.YEAR) == lastCal.get(Calendar.YEAR) && cal.get(Calendar.DAY_OF_YEAR) == lastCal.get(Calendar.DAY_OF_YEAR)
+                                            } == true)
+                                        },
                                         elevation = elevation,
                                         onClick = { viewModel.selectGroup(item.group) },
                                         onToggle = { viewModel.toggleGroup(item.group) },
@@ -318,6 +425,7 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                                 is UiItem.TaskItem -> {
                                     TodoItemRow(
                                         item = item.item,
+                                        isNew = item.item.id in newItemIds,
                                         elevation = elevation,
                                         onToggle = { viewModel.toggleTodo(item.item) },
                                         onDelete = { taskToDelete = item.item },
@@ -345,7 +453,66 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                     }
                 }
             }
-
+            }
+            if (uiState.selectedGroup != null && uiState.groupItems.isNotEmpty()) {
+                val cal = Calendar.getInstance()
+                val total = uiState.groupItems.size
+                val done = uiState.groupItems.count { i ->
+                    i.isDone || (i.repeatType != null && i.lastCompleted?.let { last ->
+                        val lastCal = Calendar.getInstance().apply { timeInMillis = last }
+                        cal.get(Calendar.YEAR) == lastCal.get(Calendar.YEAR) && cal.get(Calendar.DAY_OF_YEAR) == lastCal.get(Calendar.DAY_OF_YEAR)
+                    } == true)
+                }
+                val pct = if (total > 0) done * 100 / total else 0
+                val progressColor = when {
+                    pct <= 25 -> Color(0xFFE53935)
+                    pct <= 50 -> Color(0xFFFB8C00)
+                    pct <= 75 -> Color(0xFF1E88E5)
+                    else -> Color(0xFF43A047)
+                }
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 16.dp, bottom = 8.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shadowElevation = 4.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                progress = { done.toFloat() / total },
+                                modifier = Modifier.fillMaxSize(),
+                                strokeWidth = 3.dp,
+                                color = progressColor,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            Text(
+                                text = "${pct}%",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                color = progressColor
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "${done}/${total}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = stringResource(R.string.stats_tasks_completed),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+                }
+            }
             if (uiState.showCelebration) {
                 ConfettiAnimation(
                     modifier = Modifier.fillMaxSize(),
@@ -353,6 +520,14 @@ fun TodoListScreen(viewModel: TodoViewModel) {
                 )
             }
         }
+    }
+
+    BackHandler(enabled = showDashboard) {
+        showDashboard = false
+    }
+
+    BackHandler(enabled = uiState.selectedGroup != null) {
+        viewModel.clearSelectedGroup()
     }
 
     if (showDashboard) {
@@ -527,6 +702,8 @@ fun TodoListScreen(viewModel: TodoViewModel) {
 @Composable
 private fun GroupItemRow(
     group: TodoGroup,
+    totalTasks: Int = 0,
+    doneTasks: Int = 0,
     elevation: androidx.compose.ui.unit.Dp,
     onClick: () -> Unit,
     onToggle: () -> Unit,
@@ -554,10 +731,17 @@ private fun GroupItemRow(
          //       modifier = Modifier.padding(end = 8.dp),
          //       tint = MaterialTheme.colorScheme.outline
           //  )
+            val context = LocalContext.current
             Icon(
-                Icons.Default.Star,
+                Icons.Filled.Apps,
                 contentDescription = stringResource(R.string.icon_category),
-                modifier = Modifier.padding(end = 8.dp),
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .pointerInput(context) {
+                        detectTapGestures {
+                            Toast.makeText(context, "Segure e arraste para reposicionar", Toast.LENGTH_SHORT).show()
+                        }
+                    },
                 tint = if (group.isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
             Checkbox(
@@ -579,11 +763,30 @@ private fun GroupItemRow(
                     )
                 }
             }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.icon_edit))
-            }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.icon_edit))
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                    }
+                }
+                if (totalTasks > 0) {
+                    val gPct = doneTasks * 100 / totalTasks
+                    val gColor = when {
+                        gPct <= 25 -> Color(0xFFE53935)
+                        gPct <= 50 -> Color(0xFFFB8C00)
+                        gPct <= 75 -> Color(0xFF1E88E5)
+                        else -> Color(0xFF43A047)
+                    }
+                    Text(
+                        text = "feito ${doneTasks}/${totalTasks}",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = gColor,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }
@@ -592,6 +795,7 @@ private fun GroupItemRow(
 @Composable
 fun TodoItemRow(
     item: TodoItem,
+    isNew: Boolean = false,
     elevation: androidx.compose.ui.unit.Dp,
     onToggle: () -> Unit,
     onDelete: () -> Unit,
@@ -605,10 +809,29 @@ fun TodoItemRow(
     } == true
     val isDoneDisplay = item.isDone || isRecurringCompletedToday
     val borderColor = if (isDoneDisplay) Color(0xFF4CAF50) else Color(0xFFFFC107)
+    val shimmerProgress = remember { Animatable(-1f) }
+    LaunchedEffect(isNew) {
+        if (isNew) {
+            shimmerProgress.snapTo(-1f)
+            shimmerProgress.animateTo(2f, animationSpec = tween(1500, easing = LinearEasing))
+        }
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(8.dp)
+            .drawWithContent {
+                drawContent()
+                if (isNew && shimmerProgress.value < 2f) {
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.35f), Color.Transparent),
+                            start = Offset(size.width * (shimmerProgress.value - 0.3f), 0f),
+                            end = Offset(size.width * (shimmerProgress.value + 0.3f), size.height)
+                        )
+                    )
+                }
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = elevation),
         border = BorderStroke(2.dp, borderColor)
     ) {
@@ -618,10 +841,17 @@ fun TodoItemRow(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val context = LocalContext.current
             Icon(
-                Icons.Default.Menu,
+                Icons.Filled.AdsClick,
  contentDescription = stringResource(R.string.icon_drag),
-                modifier = Modifier.padding(end = 8.dp),
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .pointerInput(context) {
+                        detectTapGestures {
+                            Toast.makeText(context, "Segure e arraste para reposicionar", Toast.LENGTH_SHORT).show()
+                        }
+                    },
                 tint = MaterialTheme.colorScheme.outline
             )
             Checkbox(
